@@ -34,6 +34,7 @@ void main() {
     final gameController = BlockyGameController();
 
     expect(gameController.score, 0);
+    expect(gameController.perfectStreak, 0);
 
     gameController.startNextBlock();
 
@@ -43,12 +44,14 @@ void main() {
   test('ends the game and prevents new blocks after a miss', () {
     final gameController = BlockyGameController();
 
+    gameController.startNextBlock(isPerfect: true);
     gameController.endGame();
 
     expect(gameController.status, GameStatus.gameOver);
     expect(gameController.isMoving, isFalse);
     expect(gameController.startNextBlock(), isFalse);
-    expect(gameController.score, 0);
+    expect(gameController.score, 1);
+    expect(gameController.perfectStreak, 0);
     gameController.dispose();
   });
 
@@ -64,6 +67,7 @@ void main() {
     expect(gameController.movingAxis, MovingBlockAxis.x);
     expect(gameController.score, 0);
     expect(gameController.isShowingPerfect, isFalse);
+    expect(gameController.perfectStreak, 0);
     expect(gameController.round, 1);
     gameController.dispose();
   });
@@ -87,6 +91,21 @@ void main() {
     );
   });
 
+  test('keeps the placement impact subtle and brief', () {
+    expect(GameConfig.placementImpactDuration.inMilliseconds, lessThan(200));
+    expect(GameConfig.placementImpactHorizontalScale, lessThan(0.05));
+    expect(GameConfig.placementImpactVerticalScale, lessThan(0.1));
+  });
+
+  test('keeps the perfect particle effect compact', () {
+    expect(GameConfig.perfectParticleCount, lessThanOrEqualTo(12));
+    expect(GameConfig.perfectParticleLifetime, lessThan(0.6));
+    expect(
+      GameConfig.perfectParticleEffectDuration.inMilliseconds,
+      lessThan(700),
+    );
+  });
+
   test('shows perfect feedback without changing the normal score', () async {
     final gameController = BlockyGameController(
       perfectFeedbackDuration: const Duration(milliseconds: 10),
@@ -99,6 +118,28 @@ void main() {
 
     await Future<void>.delayed(const Duration(milliseconds: 20));
 
+    expect(gameController.isShowingPerfect, isFalse);
+    gameController.dispose();
+  });
+
+  test('tracks consecutive perfect placements and resets on a normal one', () {
+    final gameController = BlockyGameController();
+
+    gameController.startNextBlock(isPerfect: true);
+    expect(gameController.perfectStreak, 1);
+    expect(gameController.perfectFeedbackText, 'PERFECT!');
+
+    gameController.startNextBlock(isPerfect: true);
+    expect(gameController.perfectStreak, 2);
+    expect(gameController.perfectFeedbackText, 'PERFECT! x2');
+
+    gameController.startNextBlock(isPerfect: true);
+    gameController.startNextBlock(isPerfect: true);
+    expect(gameController.perfectStreak, 4);
+    expect(gameController.perfectFeedbackText, 'PERFECT! x4');
+
+    gameController.startNextBlock();
+    expect(gameController.perfectStreak, 0);
     expect(gameController.isShowingPerfect, isFalse);
     gameController.dispose();
   });

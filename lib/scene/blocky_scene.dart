@@ -49,6 +49,9 @@ class _BlockySceneState extends State<BlockyScene> {
   int _nextBlockColorIndex = 0;
   int _sceneRound = -1;
   final List<Node> _fallingPieces = [];
+  final List<_PerfectParticleEffect> _perfectParticleEffects = [];
+  Node? _impactBlock;
+  double _impactElapsedSeconds = 0.0;
 
   @override
   void initState() {
@@ -103,6 +106,9 @@ class _BlockySceneState extends State<BlockyScene> {
   void _resetRoundScene() {
     _scene.removeAll();
     _fallingPieces.clear();
+    _perfectParticleEffects.clear();
+    _impactBlock = null;
+    _impactElapsedSeconds = 0.0;
     _sceneRound = widget.gameController.round;
     _hasResolvedPlacement = false;
     _movingDirection = 1.0;
@@ -136,20 +142,24 @@ class _BlockySceneState extends State<BlockyScene> {
   }
 
   PhysicallyBasedMaterial _createBlockMaterial(int colorIndex) {
+    return PhysicallyBasedMaterial()
+      ..baseColorFactor = _linearBlockColor(colorIndex)
+      ..metallicFactor = 0.05
+      ..roughnessFactor = 0.65;
+  }
+
+  vm.Vector4 _linearBlockColor(int colorIndex, {double alpha = 1.0}) {
     final color = BlockColorPalette.colorForBlock(
       colorIndex,
       initialHue: _initialBlockHue,
     );
 
-    return PhysicallyBasedMaterial()
-      ..baseColorFactor = vm.Vector4(
-        _sRgbToLinear(color.r),
-        _sRgbToLinear(color.g),
-        _sRgbToLinear(color.b),
-        1.0,
-      )
-      ..metallicFactor = 0.05
-      ..roughnessFactor = 0.65;
+    return vm.Vector4(
+      _sRgbToLinear(color.r),
+      _sRgbToLinear(color.g),
+      _sRgbToLinear(color.b),
+      alpha,
+    );
   }
 
   double _sRgbToLinear(double value) {
@@ -236,6 +246,10 @@ class _BlockySceneState extends State<BlockyScene> {
         _createBlockGeometry(_towerWidth, _towerDepth),
         _movingBlockMaterial,
       );
+    }
+    _playPlacementImpact(_movingBlock);
+    if (isPerfect) {
+      _createPerfectParticleEffect(_movingBlock.position);
     }
 
     if (widget.gameController.startNextBlock(isPerfect: isPerfect)) {
@@ -327,6 +341,108 @@ class _BlockySceneState extends State<BlockyScene> {
     if (removedPiece && mounted) setState(() {});
   }
 
+  void _createPerfectParticleEffect(vm.Vector3 position) {
+    final color = _linearBlockColor(_nextBlockColorIndex - 1, alpha: 0.9);
+    final transparentColor = vm.Vector4(color.x, color.y, color.z, 0.0);
+    final system = ParticleSystem(
+      maxParticles: GameConfig.perfectParticleCount,
+      shape: SphereEmitterShape(
+        radius: GameConfig.perfectParticleEmitterRadius,
+        surfaceOnly: true,
+        hemisphere: true,
+      ),
+      spawner: Spawner(
+        bursts: const [
+          ParticleBurst(time: 0.0, count: GameConfig.perfectParticleCount),
+        ],
+      ),
+      lifetime: const ConstantFloat(GameConfig.perfectParticleLifetime),
+      startSpeed: const UniformFloat(
+        GameConfig.perfectParticleMinimumSpeed,
+        GameConfig.perfectParticleMaximumSpeed,
+      ),
+      startSize: const UniformFloat(
+        GameConfig.perfectParticleMinimumSize,
+        GameConfig.perfectParticleMaximumSize,
+      ),
+      startColor: ConstantColor(color),
+      gravity: vm.Vector3(0.0, -GameConfig.perfectParticleGravity, 0.0),
+      looping: false,
+      duration: 0.01,
+      modules: [
+        SizeOverLifeModule(
+          CurveFloat(ParticleCurve.linear(from: 1.0, to: 0.2)),
+        ),
+        ColorOverLifeModule(
+          GradientColor(
+            ColorGradient([
+              ColorStop(0.0, color),
+              ColorStop(1.0, transparentColor),
+            ]),
+          ),
+        ),
+      ],
+    );
+    final effectNode = Node()
+      ..position = vm.Vector3(
+        position.x,
+        position.y + GameConfig.blockHeight / 2,
+        position.z,
+      )
+      ..addComponent(ParticleEmitterComponent(system: system));
+
+    _scene.add(effectNode);
+    _perfectParticleEffects.add(
+      _PerfectParticleEffect(
+        effectNode,
+        GameConfig.perfectParticleEffectDuration.inMicroseconds /
+            Duration.microsecondsPerSecond,
+      ),
+    );
+  }
+
+  void _removeExpiredPerfectParticleEffects(double deltaSeconds) {
+    var removedEffect = false;
+    _perfectParticleEffects.removeWhere((effect) {
+      effect.remainingSeconds -= deltaSeconds;
+      if (effect.remainingSeconds > 0.0) return false;
+
+      _scene.remove(effect.node);
+      removedEffect = true;
+      return true;
+    });
+
+    if (removedEffect && mounted) setState(() {});
+  }
+
+  void _playPlacementImpact(Node block) {
+    _impactBlock = block;
+    _impactElapsedSeconds = 0.0;
+    block.scale = vm.Vector3.all(1.0);
+  }
+
+  void _updatePlacementImpact(double deltaSeconds) {
+    final block = _impactBlock;
+    if (block == null) return;
+
+    _impactElapsedSeconds += deltaSeconds;
+    final duration =
+        GameConfig.placementImpactDuration.inMicroseconds /
+        Duration.microsecondsPerSecond;
+    final progress = (_impactElapsedSeconds / duration).clamp(0.0, 1.0);
+    final intensity = math.sin(math.pi * progress);
+    block.scale = vm.Vector3(
+      1.0 + GameConfig.placementImpactHorizontalScale * intensity,
+      1.0 - GameConfig.placementImpactVerticalScale * intensity,
+      1.0 + GameConfig.placementImpactHorizontalScale * intensity,
+    );
+
+    if (progress == 1.0) {
+      block.scale = vm.Vector3.all(1.0);
+      _impactBlock = null;
+    }
+  }
+
   double _movementLimit(Size viewport) {
     final viewDirection = (_camera.target - _camera.position)..normalize();
     final position = _movingBlock.position;
@@ -397,7 +513,11 @@ class _BlockySceneState extends State<BlockyScene> {
         final limit = _movementLimit(constraints.biggest);
 
         return TickerMode(
-          enabled: widget.gameController.isMoving || _fallingPieces.isNotEmpty,
+          enabled:
+              widget.gameController.isMoving ||
+              _fallingPieces.isNotEmpty ||
+              _impactBlock != null ||
+              _perfectParticleEffects.isNotEmpty,
           child: SceneView(
             _scene,
             camera: _camera,
@@ -408,11 +528,20 @@ class _BlockySceneState extends State<BlockyScene> {
                 _updateCamera(deltaSeconds);
                 _moveBlock(deltaSeconds, limit);
               }
+              _updatePlacementImpact(deltaSeconds);
               _removeFallenPieces();
+              _removeExpiredPerfectParticleEffects(deltaSeconds);
             },
           ),
         );
       },
     );
   }
+}
+
+class _PerfectParticleEffect {
+  _PerfectParticleEffect(this.node, this.remainingSeconds);
+
+  final Node node;
+  double remainingSeconds;
 }

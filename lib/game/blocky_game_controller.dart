@@ -18,6 +18,7 @@ class BlockyGameController extends ChangeNotifier {
   MovingBlockAxis _movingAxis = MovingBlockAxis.x;
   int _score = 0;
   int _round = 0;
+  int _perfectStreak = 0;
   bool _isShowingPerfect = false;
   Timer? _perfectFeedbackTimer;
 
@@ -27,7 +28,10 @@ class BlockyGameController extends ChangeNotifier {
   MovingBlockAxis get movingAxis => _movingAxis;
   int get score => _score;
   int get round => _round;
+  int get perfectStreak => _perfectStreak;
   bool get isShowingPerfect => _isShowingPerfect;
+  String get perfectFeedbackText =>
+      _perfectStreak > 1 ? 'PERFECT! x$_perfectStreak' : 'PERFECT!';
 
   void stopMovingBlock() {
     if (isGameOver || !_isMoving) return;
@@ -41,7 +45,11 @@ class BlockyGameController extends ChangeNotifier {
 
     _score++;
     if (isPerfect) {
+      _perfectStreak++;
       _showPerfectFeedback();
+    } else {
+      _perfectStreak = 0;
+      _clearPerfectFeedback();
     }
     _movingAxis = switch (_movingAxis) {
       MovingBlockAxis.x => MovingBlockAxis.z,
@@ -56,6 +64,7 @@ class BlockyGameController extends ChangeNotifier {
     if (isGameOver) return;
 
     _clearPerfectFeedback();
+    _perfectStreak = 0;
     _isMoving = false;
     _status = GameStatus.gameOver;
     notifyListeners();
@@ -64,6 +73,7 @@ class BlockyGameController extends ChangeNotifier {
   void restartGame() {
     _clearPerfectFeedback();
     _score = 0;
+    _perfectStreak = 0;
     _movingAxis = MovingBlockAxis.x;
     _status = GameStatus.playing;
     _isMoving = true;

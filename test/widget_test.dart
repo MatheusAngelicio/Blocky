@@ -13,21 +13,36 @@ void main() {
     expect(gameController.isMoving, isFalse);
   });
 
+  test('alternates the moving axis for each next block', () {
+    final gameController = BlockyGameController();
+
+    expect(gameController.movingAxis, MovingBlockAxis.x);
+
+    gameController.startNextBlock();
+
+    expect(gameController.isMoving, isTrue);
+    expect(gameController.movingAxis, MovingBlockAxis.z);
+
+    gameController.startNextBlock();
+
+    expect(gameController.movingAxis, MovingBlockAxis.x);
+  });
+
   test('calculates the valid horizontal block overlap', () {
     final overlap = calculateBlockOverlap(
-      below: const BlockFootprint(centerX: 0.0, width: 3.6),
-      current: const BlockFootprint(centerX: 1.0, width: 3.6),
+      below: const BlockAxisRange(center: 0.0, length: 3.6),
+      current: const BlockAxisRange(center: 1.0, length: 3.6),
     );
 
     expect(overlap.hasOverlap, isTrue);
-    expect(overlap.width, closeTo(2.6, 0.0001));
-    expect(overlap.centerX, closeTo(0.5, 0.0001));
+    expect(overlap.length, closeTo(2.6, 0.0001));
+    expect(overlap.center, closeTo(0.5, 0.0001));
   });
 
   test('identifies when blocks do not overlap', () {
     final overlap = calculateBlockOverlap(
-      below: const BlockFootprint(centerX: 0.0, width: 3.6),
-      current: const BlockFootprint(centerX: 4.0, width: 3.6),
+      below: const BlockAxisRange(center: 0.0, length: 3.6),
+      current: const BlockAxisRange(center: 4.0, length: 3.6),
     );
 
     expect(overlap.hasOverlap, isFalse);

@@ -142,6 +142,20 @@ void main() {
     );
   });
 
+  test('calculates the overhanging portion to cut off', () {
+    const current = BlockAxisRange(center: 1.0, length: 3.6);
+    final overlap = calculateBlockOverlap(
+      below: const BlockAxisRange(center: 0.0, length: 3.6),
+      current: current,
+    );
+
+    final cutOff = calculateCutOffRange(current: current, overlap: overlap);
+
+    expect(cutOff, isNotNull);
+    expect(cutOff!.length, closeTo(1.0, 0.0001));
+    expect(cutOff.center, closeTo(2.3, 0.0001));
+  });
+
   test('calculates the valid horizontal block overlap', () {
     final overlap = calculateBlockOverlap(
       below: const BlockAxisRange(center: 0.0, length: 3.6),

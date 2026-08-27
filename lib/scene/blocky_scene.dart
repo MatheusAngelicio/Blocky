@@ -4,8 +4,10 @@ import 'package:blocky/game/block_color_palette.dart';
 import 'package:blocky/game/block_overlap.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_config.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/widgets.dart' hide BoxShape;
+import 'package:flutter_scene/physics.dart';
 import 'package:flutter_scene/scene.dart';
+import 'package:flutter_scene_rapier/flutter_scene_rapier.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
 class BlockyScene extends StatefulWidget {
@@ -22,6 +24,7 @@ class _BlockySceneState extends State<BlockyScene> {
   static const _initialCameraTargetY = 2.0;
 
   final Scene _scene = Scene();
+  PhysicsWorld? _physicsWorld;
   late PhysicallyBasedMaterial _movingBlockMaterial;
   late Node _movingBlock;
   final PerspectiveCamera _camera = PerspectiveCamera(
@@ -45,6 +48,7 @@ class _BlockySceneState extends State<BlockyScene> {
   late double _initialBlockHue;
   int _nextBlockColorIndex = 0;
   int _sceneRound = -1;
+  final List<Node> _fallingPieces = [];
 
   @override
   void initState() {
@@ -56,6 +60,11 @@ class _BlockySceneState extends State<BlockyScene> {
   @override
   void dispose() {
     widget.gameController.removeListener(_onGameStateChanged);
+    _scene.removeAll();
+    final physicsWorld = _physicsWorld;
+    if (physicsWorld != null) {
+      _scene.root.removeComponent(physicsWorld);
+    }
     super.dispose();
   }
 
@@ -71,11 +80,17 @@ class _BlockySceneState extends State<BlockyScene> {
 
   Future<void> _initializeScene() async {
     await Scene.initializeStaticResources();
+    await RapierWorld.ensureInitialized();
+    if (!mounted) return;
 
     _scene.directionalLight = DirectionalLight(
       direction: vm.Vector3(-0.5, -1.0, -0.35),
       intensity: 1.6,
     );
+    _physicsWorld = PhysicsWorld(
+      RapierWorld(gravity: vm.Vector3(0.0, -GameConfig.physicsGravity, 0.0)),
+    );
+    _scene.root.addComponent(_physicsWorld!);
     _resetRoundScene();
     _isReady = true;
     if (!widget.gameController.isMoving) {
@@ -87,6 +102,7 @@ class _BlockySceneState extends State<BlockyScene> {
 
   void _resetRoundScene() {
     _scene.removeAll();
+    _fallingPieces.clear();
     _sceneRound = widget.gameController.round;
     _hasResolvedPlacement = false;
     _movingDirection = 1.0;
@@ -188,6 +204,14 @@ class _BlockySceneState extends State<BlockyScene> {
       current: current,
       tolerance: GameConfig.perfectPlacementTolerance,
     );
+    if (!isPerfect) {
+      _createFallingPiece(
+        movesOnX: movesOnX,
+        current: current,
+        overlap: overlap,
+        position: position,
+      );
+    }
 
     if (isPerfect && movesOnX) {
       _towerCenterX = below.center;
@@ -217,6 +241,90 @@ class _BlockySceneState extends State<BlockyScene> {
     if (widget.gameController.startNextBlock(isPerfect: isPerfect)) {
       _createMovingBlock();
     }
+  }
+
+  void _createFallingPiece({
+    required bool movesOnX,
+    required BlockAxisRange current,
+    required BlockOverlap overlap,
+    required vm.Vector3 position,
+  }) {
+    final cutRange = calculateCutOffRange(current: current, overlap: overlap);
+    if (cutRange == null) return;
+
+    final width = movesOnX ? cutRange.length : _towerWidth;
+    final depth = movesOnX ? _towerDepth : cutRange.length;
+    final movesTowardsPositiveAxis = cutRange.center > overlap.center;
+    final outwardDirection = movesTowardsPositiveAxis ? 1.0 : -1.0;
+    final linearVelocity = movesOnX
+        ? vm.Vector3(
+            outwardDirection * GameConfig.fallingPieceOutwardSpeed,
+            0,
+            0,
+          )
+        : vm.Vector3(
+            0,
+            0,
+            outwardDirection * GameConfig.fallingPieceOutwardSpeed,
+          );
+    final angularVelocity = movesOnX
+        ? vm.Vector3(
+            0,
+            0,
+            outwardDirection * GameConfig.fallingPieceAngularSpeed,
+          )
+        : vm.Vector3(
+            outwardDirection * GameConfig.fallingPieceAngularSpeed,
+            0,
+            0,
+          );
+    final piece =
+        Node(
+            mesh: Mesh(
+              _createBlockGeometry(width, depth),
+              _movingBlockMaterial,
+            ),
+          )
+          ..position = movesOnX
+              ? vm.Vector3(cutRange.center, position.y, position.z)
+              : vm.Vector3(position.x, position.y, cutRange.center)
+          ..addComponent(
+            RigidBody(
+              mass: GameConfig.fallingPieceMass,
+              linearVelocity: linearVelocity,
+              angularVelocity: angularVelocity,
+            ),
+          )
+          // As sobras caem visualmente, mas não colidem com a torre nem entre si.
+          ..addComponent(
+            Collider(
+              shape: BoxShape(
+                halfExtents: vm.Vector3(
+                  width / 2,
+                  GameConfig.blockHeight / 2,
+                  depth / 2,
+                ),
+              ),
+              collisionMask: 0,
+            ),
+          );
+
+    _scene.add(piece);
+    _fallingPieces.add(piece);
+  }
+
+  void _removeFallenPieces() {
+    final removalY = _towerTopY - GameConfig.fallingPieceCleanupDistance;
+    var removedPiece = false;
+    _fallingPieces.removeWhere((piece) {
+      if (piece.position.y > removalY) return false;
+
+      _scene.remove(piece);
+      removedPiece = true;
+      return true;
+    });
+
+    if (removedPiece && mounted) setState(() {});
   }
 
   double _movementLimit(Size viewport) {
@@ -289,15 +397,18 @@ class _BlockySceneState extends State<BlockyScene> {
         final limit = _movementLimit(constraints.biggest);
 
         return TickerMode(
-          enabled: widget.gameController.isMoving,
+          enabled: widget.gameController.isMoving || _fallingPieces.isNotEmpty,
           child: SceneView(
             _scene,
             camera: _camera,
             // Mantém uma única instância de ticker durante todas as rodadas.
             autoTick: true,
             onTick: (_, deltaSeconds) {
-              _updateCamera(deltaSeconds);
-              _moveBlock(deltaSeconds, limit);
+              if (widget.gameController.isMoving) {
+                _updateCamera(deltaSeconds);
+                _moveBlock(deltaSeconds, limit);
+              }
+              _removeFallenPieces();
             },
           ),
         );

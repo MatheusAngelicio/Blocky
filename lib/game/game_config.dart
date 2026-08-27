@@ -15,6 +15,11 @@ abstract final class GameConfig {
   static const movingBlockMaximumSpeed = 7.0;
   static const movingBlockSpeedGrowthRate = 0.07;
   static const cameraFollowSpeed = 3.5;
+  static const physicsGravity = 9.81;
+  static const fallingPieceMass = 0.5;
+  static const fallingPieceOutwardSpeed = 1.2;
+  static const fallingPieceAngularSpeed = 4.0;
+  static const fallingPieceCleanupDistance = 14.0;
   // Distância máxima, em unidades da cena, para considerar um encaixe perfeito.
   static const perfectPlacementTolerance = 0.12;
   static const perfectFeedbackDuration = Duration(milliseconds: 700);

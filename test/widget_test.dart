@@ -28,6 +28,16 @@ void main() {
     expect(gameController.movingAxis, MovingBlockAxis.x);
   });
 
+  test('adds one point after a successful placement', () {
+    final gameController = BlockyGameController();
+
+    expect(gameController.score, 0);
+
+    gameController.startNextBlock();
+
+    expect(gameController.score, 1);
+  });
+
   test('calculates the valid horizontal block overlap', () {
     final overlap = calculateBlockOverlap(
       below: const BlockAxisRange(center: 0.0, length: 3.6),

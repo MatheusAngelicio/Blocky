@@ -17,12 +17,18 @@ class _GameScreenState extends State<GameScreen> {
   void initState() {
     super.initState();
     _gameController = BlockyGameController();
+    _gameController.addListener(_onGameStateChanged);
   }
 
   @override
   void dispose() {
+    _gameController.removeListener(_onGameStateChanged);
     _gameController.dispose();
     super.dispose();
+  }
+
+  void _onGameStateChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -32,8 +38,29 @@ class _GameScreenState extends State<GameScreen> {
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTapDown: (_) => _gameController.stopMovingBlock(),
-        child: SizedBox.expand(
-          child: BlockyScene(gameController: _gameController),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            BlockyScene(gameController: _gameController),
+            IgnorePointer(
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 24),
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: Text(
+                      '${_gameController.score}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

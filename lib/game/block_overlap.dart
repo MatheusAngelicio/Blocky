@@ -30,3 +30,11 @@ BlockOverlap calculateBlockOverlap({
     end: math.min(current.end, below.end),
   );
 }
+
+bool isPerfectBlockPlacement({
+  required BlockAxisRange current,
+  required BlockAxisRange below,
+  required double tolerance,
+}) {
+  return (current.center - below.center).abs() <= tolerance;
+}

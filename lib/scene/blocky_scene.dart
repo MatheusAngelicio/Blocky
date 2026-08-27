@@ -142,23 +142,32 @@ class _BlockySceneState extends State<BlockyScene> {
     _hasResolvedPlacement = true;
     final position = _movingBlock.position;
     final movesOnX = widget.gameController.movingAxis == MovingBlockAxis.x;
-    final overlap = calculateBlockOverlap(
-      below: BlockAxisRange(
-        center: movesOnX ? _towerCenterX : _towerCenterZ,
-        length: movesOnX ? _towerWidth : _towerDepth,
-      ),
-      current: BlockAxisRange(
-        center: movesOnX ? position.x : position.z,
-        length: movesOnX ? _towerWidth : _towerDepth,
-      ),
+    final below = BlockAxisRange(
+      center: movesOnX ? _towerCenterX : _towerCenterZ,
+      length: movesOnX ? _towerWidth : _towerDepth,
     );
+    final current = BlockAxisRange(
+      center: movesOnX ? position.x : position.z,
+      length: movesOnX ? _towerWidth : _towerDepth,
+    );
+    final overlap = calculateBlockOverlap(below: below, current: current);
 
     if (!overlap.hasOverlap) {
       _movingBlock.visible = false;
       return;
     }
 
-    if (movesOnX) {
+    final isPerfect = isPerfectBlockPlacement(
+      below: below,
+      current: current,
+      tolerance: GameConfig.perfectPlacementTolerance,
+    );
+
+    if (isPerfect && movesOnX) {
+      _towerCenterX = below.center;
+    } else if (isPerfect) {
+      _towerCenterZ = below.center;
+    } else if (movesOnX) {
       _towerCenterX = overlap.center;
       _towerWidth = overlap.length;
     } else {
@@ -172,12 +181,14 @@ class _BlockySceneState extends State<BlockyScene> {
       _towerTopY,
       _towerCenterZ,
     );
-    _movingBlock.mesh = Mesh(
-      _createBlockGeometry(_towerWidth, _towerDepth),
-      _movingBlockMaterial,
-    );
+    if (!isPerfect) {
+      _movingBlock.mesh = Mesh(
+        _createBlockGeometry(_towerWidth, _towerDepth),
+        _movingBlockMaterial,
+      );
+    }
 
-    widget.gameController.startNextBlock();
+    widget.gameController.startNextBlock(isPerfect: isPerfect);
     _createMovingBlock();
   }
 
@@ -203,9 +214,11 @@ class _BlockySceneState extends State<BlockyScene> {
     final movesOnX = widget.gameController.movingAxis == MovingBlockAxis.x;
     final currentCoordinate = movesOnX ? position.x : position.z;
     final movementCenter = movesOnX ? _towerCenterX : _towerCenterZ;
+    final speed = GameConfig.movingBlockSpeedForScore(
+      widget.gameController.score,
+    );
     final nextCoordinate =
-        currentCoordinate +
-        _movingDirection * GameConfig.movingBlockSpeed * deltaSeconds;
+        currentCoordinate + _movingDirection * speed * deltaSeconds;
     if (nextCoordinate >= movementCenter + limit ||
         nextCoordinate <= movementCenter - limit) {
       _movingDirection = -_movingDirection;

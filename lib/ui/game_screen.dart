@@ -60,6 +60,26 @@ class _GameScreenState extends State<GameScreen> {
                 ),
               ),
             ),
+            if (_gameController.isShowingPerfect)
+              const IgnorePointer(
+                child: SafeArea(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 88),
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: Text(
+                        'PERFECT!',
+                        style: TextStyle(
+                          color: Color(0xFFFFE082),
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

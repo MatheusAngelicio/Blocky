@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 abstract final class GameConfig {
@@ -9,6 +11,17 @@ abstract final class GameConfig {
   static const blockGap = 0.04;
   static const blockVerticalStep = blockHeight + blockGap;
   static const movingBlockCenterY = 0.64;
-  static const movingBlockSpeed = 3.5;
+  static const movingBlockInitialSpeed = 3.5;
+  static const movingBlockMaximumSpeed = 7.0;
+  static const movingBlockSpeedGrowthRate = 0.07;
   static const cameraFollowSpeed = 3.5;
+  // Distância máxima, em unidades da cena, para considerar um encaixe perfeito.
+  static const perfectPlacementTolerance = 0.12;
+  static const perfectFeedbackDuration = Duration(milliseconds: 700);
+
+  static double movingBlockSpeedForScore(int score) {
+    return movingBlockMaximumSpeed -
+        (movingBlockMaximumSpeed - movingBlockInitialSpeed) *
+            math.exp(-score * movingBlockSpeedGrowthRate);
+  }
 }

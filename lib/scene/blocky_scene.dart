@@ -1,12 +1,15 @@
 import 'dart:math' as math;
 
+import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_config.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
 class BlockyScene extends StatefulWidget {
-  const BlockyScene({super.key});
+  const BlockyScene({super.key, required this.gameController});
+
+  final BlockyGameController gameController;
 
   @override
   State<BlockyScene> createState() => _BlockySceneState();
@@ -27,7 +30,18 @@ class _BlockySceneState extends State<BlockyScene> {
   @override
   void initState() {
     super.initState();
+    widget.gameController.addListener(_onGameStateChanged);
     _initializeScene();
+  }
+
+  @override
+  void dispose() {
+    widget.gameController.removeListener(_onGameStateChanged);
+    super.dispose();
+  }
+
+  void _onGameStateChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _initializeScene() async {
@@ -72,7 +86,7 @@ class _BlockySceneState extends State<BlockyScene> {
   }
 
   void _moveBlock(double deltaSeconds, double limit) {
-    if (limit == 0.0) return;
+    if (!widget.gameController.isMoving || limit == 0.0) return;
 
     final nextX =
         _movingBlock.position.x +
@@ -101,6 +115,7 @@ class _BlockySceneState extends State<BlockyScene> {
         return SceneView(
           _scene,
           camera: _camera,
+          autoTick: widget.gameController.isMoving,
           onTick: (_, deltaSeconds) => _moveBlock(deltaSeconds, limit),
         );
       },

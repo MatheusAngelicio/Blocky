@@ -1,8 +1,14 @@
-import 'package:blocky/app/blocky_app.dart';
+import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('creates the Blocky application', () {
-    expect(const BlockyApp(), isA<BlockyApp>());
+  test('stops the moving block', () {
+    final gameController = BlockyGameController();
+
+    expect(gameController.isMoving, isTrue);
+
+    gameController.stopMovingBlock();
+
+    expect(gameController.isMoving, isFalse);
   });
 }

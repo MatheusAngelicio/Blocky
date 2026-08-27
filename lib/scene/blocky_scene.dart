@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:blocky/game/block_overlap.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_config.dart';
 import 'package:flutter/widgets.dart';
@@ -18,13 +19,18 @@ class BlockyScene extends StatefulWidget {
 class _BlockySceneState extends State<BlockyScene> {
   final Scene _scene = Scene();
   late final Node _movingBlock;
+  late final PhysicallyBasedMaterial _blockMaterial;
   final PerspectiveCamera _camera = PerspectiveCamera(
     // Aumente o módulo de Z para afastar a câmera; diminua para aproximá-la.
-    position: vm.Vector3(0.0, 4.8, -17.0),
-    target: vm.Vector3.zero(),
+    // Ajuste position.y para alterar a altura física da câmera.
+    // Ajuste target.y para o enquadramento vertical: aumente-o para fazer os
+    // blocos aparecerem mais abaixo na tela; diminua-o para fazê-los subir.
+    position: vm.Vector3(0.0, 9.8, -17.0),
+    target: vm.Vector3(0.0, 2.0, 0.0),
   );
 
   bool _isReady = false;
+  bool _hasResolvedPlacement = false;
   double _movingDirection = 1.0;
 
   @override
@@ -41,6 +47,10 @@ class _BlockySceneState extends State<BlockyScene> {
   }
 
   void _onGameStateChanged() {
+    if (_isReady && !widget.gameController.isMoving) {
+      _resolveMovingBlockPlacement();
+    }
+
     if (mounted) setState(() {});
   }
 
@@ -54,7 +64,7 @@ class _BlockySceneState extends State<BlockyScene> {
         GameConfig.blockDepth,
       ),
     );
-    final material = PhysicallyBasedMaterial()
+    _blockMaterial = PhysicallyBasedMaterial()
       ..baseColorFactor = vm.Vector4(0.08, 0.5, 0.95, 1.0)
       ..metallicFactor = 0.05
       ..roughnessFactor = 0.65;
@@ -63,19 +73,58 @@ class _BlockySceneState extends State<BlockyScene> {
       direction: vm.Vector3(-0.5, -1.0, -0.35),
       intensity: 1.6,
     );
-    _scene.add(Node(mesh: Mesh(geometry, material)));
-    _movingBlock = Node(mesh: Mesh(geometry, material))
-      ..position = vm.Vector3(0.0, GameConfig.movingBlockHeight, 0.0);
+    _scene.add(Node(mesh: Mesh(geometry, _blockMaterial)));
+    _movingBlock = Node(mesh: Mesh(geometry, _blockMaterial))
+      ..position = vm.Vector3(0.0, GameConfig.movingBlockCenterY, 0.0);
     _scene.add(_movingBlock);
 
-    if (mounted) {
-      setState(() => _isReady = true);
+    _isReady = true;
+    if (!widget.gameController.isMoving) {
+      _resolveMovingBlockPlacement();
     }
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _resolveMovingBlockPlacement() {
+    if (_hasResolvedPlacement) return;
+
+    _hasResolvedPlacement = true;
+    final overlap = calculateBlockOverlap(
+      below: const BlockFootprint(centerX: 0.0, width: GameConfig.blockWidth),
+      current: BlockFootprint(
+        centerX: _movingBlock.position.x,
+        width: GameConfig.blockWidth,
+      ),
+    );
+
+    if (!overlap.hasOverlap) {
+      _movingBlock.visible = false;
+      return;
+    }
+
+    _movingBlock.position = vm.Vector3(
+      overlap.centerX,
+      GameConfig.movingBlockCenterY,
+      0.0,
+    );
+    _movingBlock.mesh = Mesh(
+      CuboidGeometry(
+        vm.Vector3(
+          overlap.width,
+          GameConfig.blockHeight,
+          GameConfig.blockDepth,
+        ),
+      ),
+      _blockMaterial,
+    );
   }
 
   double _movementLimit(Size viewport) {
     final viewDirection = (_camera.target - _camera.position)..normalize();
-    final blockPosition = vm.Vector3(0.0, GameConfig.movingBlockHeight, 0.0);
+    final blockPosition = vm.Vector3(0.0, GameConfig.movingBlockCenterY, 0.0);
     final depth = (blockPosition - _camera.position).dot(viewDirection);
     final halfFovX = math.atan(
       math.tan(_camera.fovRadiansY / 2) * viewport.aspectRatio,
@@ -97,7 +146,7 @@ class _BlockySceneState extends State<BlockyScene> {
 
     _movingBlock.position = vm.Vector3(
       nextX.clamp(-limit, limit),
-      GameConfig.movingBlockHeight,
+      GameConfig.movingBlockCenterY,
       0.0,
     );
   }

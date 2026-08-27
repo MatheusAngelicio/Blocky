@@ -80,6 +80,53 @@ class _GameScreenState extends State<GameScreen> {
                   ),
                 ),
               ),
+            if (_gameController.isGameOver)
+              Positioned.fill(
+                child: ColoredBox(
+                  color: Color(0xB0101018),
+                  child: SafeArea(
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Blocky',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 42,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          SizedBox(height: 20),
+                          Text(
+                            'SCORE',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.4,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            '${_gameController.score}',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 48,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          SizedBox(height: 28),
+                          FilledButton(
+                            onPressed: _gameController.restartGame,
+                            child: Text('Play Again'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

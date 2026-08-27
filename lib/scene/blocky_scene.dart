@@ -41,8 +41,10 @@ class _BlockySceneState extends State<BlockyScene> {
   double _towerTopY = 0.0;
   double _towerWidth = GameConfig.blockWidth;
   double _towerDepth = GameConfig.blockDepth;
-  final double _initialBlockHue = math.Random().nextDouble() * 360.0;
+  final math.Random _random = math.Random();
+  late double _initialBlockHue;
   int _nextBlockColorIndex = 0;
+  int _sceneRound = -1;
 
   @override
   void initState() {
@@ -58,7 +60,9 @@ class _BlockySceneState extends State<BlockyScene> {
   }
 
   void _onGameStateChanged() {
-    if (_isReady && !widget.gameController.isMoving) {
+    if (_isReady && widget.gameController.round != _sceneRound) {
+      _resetRoundScene();
+    } else if (_isReady && !widget.gameController.isMoving) {
       _resolveMovingBlockPlacement();
     }
 
@@ -72,6 +76,29 @@ class _BlockySceneState extends State<BlockyScene> {
       direction: vm.Vector3(-0.5, -1.0, -0.35),
       intensity: 1.6,
     );
+    _resetRoundScene();
+    _isReady = true;
+    if (!widget.gameController.isMoving) {
+      _resolveMovingBlockPlacement();
+    }
+
+    if (mounted) setState(() {});
+  }
+
+  void _resetRoundScene() {
+    _scene.removeAll();
+    _sceneRound = widget.gameController.round;
+    _hasResolvedPlacement = false;
+    _movingDirection = 1.0;
+    _towerCenterX = 0.0;
+    _towerCenterZ = 0.0;
+    _towerTopY = 0.0;
+    _towerWidth = GameConfig.blockWidth;
+    _towerDepth = GameConfig.blockDepth;
+    _initialBlockHue = _random.nextDouble() * 360.0;
+    _nextBlockColorIndex = 0;
+    _resetCamera();
+
     _scene.add(
       Node(
         mesh: Mesh(
@@ -80,14 +107,12 @@ class _BlockySceneState extends State<BlockyScene> {
         ),
       ),
     );
-
-    _isReady = true;
     _createMovingBlock();
-    if (!widget.gameController.isMoving) {
-      _resolveMovingBlockPlacement();
-    }
+  }
 
-    if (mounted) setState(() {});
+  void _resetCamera() {
+    _camera.position = vm.Vector3(0.0, _initialCameraPositionY, -17.0);
+    _camera.target = vm.Vector3(0.0, _initialCameraTargetY, 0.0);
   }
 
   CuboidGeometry _createBlockGeometry(double width, double depth) {
@@ -154,6 +179,7 @@ class _BlockySceneState extends State<BlockyScene> {
 
     if (!overlap.hasOverlap) {
       _movingBlock.visible = false;
+      widget.gameController.endGame();
       return;
     }
 
@@ -188,8 +214,9 @@ class _BlockySceneState extends State<BlockyScene> {
       );
     }
 
-    widget.gameController.startNextBlock(isPerfect: isPerfect);
-    _createMovingBlock();
+    if (widget.gameController.startNextBlock(isPerfect: isPerfect)) {
+      _createMovingBlock();
+    }
   }
 
   double _movementLimit(Size viewport) {
@@ -261,14 +288,18 @@ class _BlockySceneState extends State<BlockyScene> {
       builder: (context, constraints) {
         final limit = _movementLimit(constraints.biggest);
 
-        return SceneView(
-          _scene,
-          camera: _camera,
-          autoTick: widget.gameController.isMoving,
-          onTick: (_, deltaSeconds) {
-            _updateCamera(deltaSeconds);
-            _moveBlock(deltaSeconds, limit);
-          },
+        return TickerMode(
+          enabled: widget.gameController.isMoving,
+          child: SceneView(
+            _scene,
+            camera: _camera,
+            // Mantém uma única instância de ticker durante todas as rodadas.
+            autoTick: true,
+            onTick: (_, deltaSeconds) {
+              _updateCamera(deltaSeconds);
+              _moveBlock(deltaSeconds, limit);
+            },
+          ),
         );
       },
     );

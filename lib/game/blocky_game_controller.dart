@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 
 enum MovingBlockAxis { x, z }
 
+enum GameStatus { playing, gameOver }
+
 class BlockyGameController extends ChangeNotifier {
   BlockyGameController({
     Duration perfectFeedbackDuration = GameConfig.perfectFeedbackDuration,
@@ -12,24 +14,31 @@ class BlockyGameController extends ChangeNotifier {
 
   final Duration _perfectFeedbackDuration;
   bool _isMoving = true;
+  GameStatus _status = GameStatus.playing;
   MovingBlockAxis _movingAxis = MovingBlockAxis.x;
   int _score = 0;
+  int _round = 0;
   bool _isShowingPerfect = false;
   Timer? _perfectFeedbackTimer;
 
   bool get isMoving => _isMoving;
+  GameStatus get status => _status;
+  bool get isGameOver => _status == GameStatus.gameOver;
   MovingBlockAxis get movingAxis => _movingAxis;
   int get score => _score;
+  int get round => _round;
   bool get isShowingPerfect => _isShowingPerfect;
 
   void stopMovingBlock() {
-    if (!_isMoving) return;
+    if (isGameOver || !_isMoving) return;
 
     _isMoving = false;
     notifyListeners();
   }
 
-  void startNextBlock({bool isPerfect = false}) {
+  bool startNextBlock({bool isPerfect = false}) {
+    if (isGameOver) return false;
+
     _score++;
     if (isPerfect) {
       _showPerfectFeedback();
@@ -40,6 +49,26 @@ class BlockyGameController extends ChangeNotifier {
     };
     _isMoving = true;
     notifyListeners();
+    return true;
+  }
+
+  void endGame() {
+    if (isGameOver) return;
+
+    _clearPerfectFeedback();
+    _isMoving = false;
+    _status = GameStatus.gameOver;
+    notifyListeners();
+  }
+
+  void restartGame() {
+    _clearPerfectFeedback();
+    _score = 0;
+    _movingAxis = MovingBlockAxis.x;
+    _status = GameStatus.playing;
+    _isMoving = true;
+    _round++;
+    notifyListeners();
   }
 
   void _showPerfectFeedback() {
@@ -47,13 +76,20 @@ class BlockyGameController extends ChangeNotifier {
     _isShowingPerfect = true;
     _perfectFeedbackTimer = Timer(_perfectFeedbackDuration, () {
       _isShowingPerfect = false;
+      _perfectFeedbackTimer = null;
       notifyListeners();
     });
   }
 
+  void _clearPerfectFeedback() {
+    _perfectFeedbackTimer?.cancel();
+    _perfectFeedbackTimer = null;
+    _isShowingPerfect = false;
+  }
+
   @override
   void dispose() {
-    _perfectFeedbackTimer?.cancel();
+    _clearPerfectFeedback();
     super.dispose();
   }
 }

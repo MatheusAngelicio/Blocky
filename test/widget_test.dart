@@ -40,6 +40,34 @@ void main() {
     expect(gameController.score, 1);
   });
 
+  test('ends the game and prevents new blocks after a miss', () {
+    final gameController = BlockyGameController();
+
+    gameController.endGame();
+
+    expect(gameController.status, GameStatus.gameOver);
+    expect(gameController.isMoving, isFalse);
+    expect(gameController.startNextBlock(), isFalse);
+    expect(gameController.score, 0);
+    gameController.dispose();
+  });
+
+  test('restarts the game from its initial state', () {
+    final gameController = BlockyGameController();
+
+    gameController.startNextBlock(isPerfect: true);
+    gameController.endGame();
+    gameController.restartGame();
+
+    expect(gameController.status, GameStatus.playing);
+    expect(gameController.isMoving, isTrue);
+    expect(gameController.movingAxis, MovingBlockAxis.x);
+    expect(gameController.score, 0);
+    expect(gameController.isShowingPerfect, isFalse);
+    expect(gameController.round, 1);
+    gameController.dispose();
+  });
+
   test('increases block speed smoothly up to a maximum', () {
     final initialSpeed = GameConfig.movingBlockSpeedForScore(0);
     final intermediateSpeed = GameConfig.movingBlockSpeedForScore(10);

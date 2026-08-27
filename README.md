@@ -1,16 +1,18 @@
-# blocky
+# Blocky
 
-A new Flutter project.
+Jogo casual 3D de empilhamento de blocos, criado com Flutter e Flutter Scene.
 
-## Getting Started
+## Requisitos
 
-This project is a starting point for a Flutter application.
+- Flutter 3.47 estável ou mais recente;
+- Dart 3.10 estável ou mais recente.
 
-A few resources to get you started if this is your first Flutter project:
+Após atualizar o SDK, execute `flutter pub get` para resolver o Flutter Scene
+0.23.x.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Estrutura
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- `lib/app`: composição da aplicação Flutter;
+- `lib/game`: configurações e, futuramente, regras da partida;
+- `lib/scene`: renderização 3D com Flutter Scene;
+- `lib/ui`: telas e HUD feitos com widgets Flutter.

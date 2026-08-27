@@ -1,3 +1,4 @@
+import 'package:blocky/game/block_color_palette.dart';
 import 'package:blocky/game/block_overlap.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,6 +37,24 @@ void main() {
     gameController.startNextBlock();
 
     expect(gameController.score, 1);
+  });
+
+  test('cycles block colors through deterministic hue steps', () {
+    const initialHue = 37.0;
+    final firstColor = BlockColorPalette.colorForBlock(
+      0,
+      initialHue: initialHue,
+    );
+    final nextColor = BlockColorPalette.colorForBlock(
+      1,
+      initialHue: initialHue,
+    );
+
+    expect(nextColor, isNot(firstColor));
+    expect(
+      BlockColorPalette.colorForBlock(20, initialHue: initialHue),
+      firstColor,
+    );
   });
 
   test('calculates the valid horizontal block overlap', () {

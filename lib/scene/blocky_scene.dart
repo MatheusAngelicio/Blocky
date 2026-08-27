@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:blocky/game/block_color_palette.dart';
 import 'package:blocky/game/block_overlap.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_config.dart';
@@ -21,7 +22,7 @@ class _BlockySceneState extends State<BlockyScene> {
   static const _initialCameraTargetY = 2.0;
 
   final Scene _scene = Scene();
-  late final PhysicallyBasedMaterial _blockMaterial;
+  late PhysicallyBasedMaterial _movingBlockMaterial;
   late Node _movingBlock;
   final PerspectiveCamera _camera = PerspectiveCamera(
     // Aumente o módulo de Z para afastar a câmera; diminua para aproximá-la.
@@ -40,6 +41,8 @@ class _BlockySceneState extends State<BlockyScene> {
   double _towerTopY = 0.0;
   double _towerWidth = GameConfig.blockWidth;
   double _towerDepth = GameConfig.blockDepth;
+  final double _initialBlockHue = math.Random().nextDouble() * 360.0;
+  int _nextBlockColorIndex = 0;
 
   @override
   void initState() {
@@ -65,11 +68,6 @@ class _BlockySceneState extends State<BlockyScene> {
   Future<void> _initializeScene() async {
     await Scene.initializeStaticResources();
 
-    _blockMaterial = PhysicallyBasedMaterial()
-      ..baseColorFactor = vm.Vector4(0.08, 0.5, 0.95, 1.0)
-      ..metallicFactor = 0.05
-      ..roughnessFactor = 0.65;
-
     _scene.directionalLight = DirectionalLight(
       direction: vm.Vector3(-0.5, -1.0, -0.35),
       intensity: 1.6,
@@ -78,7 +76,7 @@ class _BlockySceneState extends State<BlockyScene> {
       Node(
         mesh: Mesh(
           _createBlockGeometry(GameConfig.blockWidth, GameConfig.blockDepth),
-          _blockMaterial,
+          _createBlockMaterial(_nextBlockColorIndex++),
         ),
       ),
     );
@@ -96,14 +94,38 @@ class _BlockySceneState extends State<BlockyScene> {
     return CuboidGeometry(vm.Vector3(width, GameConfig.blockHeight, depth));
   }
 
+  PhysicallyBasedMaterial _createBlockMaterial(int colorIndex) {
+    final color = BlockColorPalette.colorForBlock(
+      colorIndex,
+      initialHue: _initialBlockHue,
+    );
+
+    return PhysicallyBasedMaterial()
+      ..baseColorFactor = vm.Vector4(
+        _sRgbToLinear(color.r),
+        _sRgbToLinear(color.g),
+        _sRgbToLinear(color.b),
+        1.0,
+      )
+      ..metallicFactor = 0.05
+      ..roughnessFactor = 0.65;
+  }
+
+  double _sRgbToLinear(double value) {
+    if (value <= 0.04045) return value / 12.92;
+
+    return math.pow((value + 0.055) / 1.055, 2.4).toDouble();
+  }
+
   void _createMovingBlock() {
     _hasResolvedPlacement = false;
     _movingDirection = 1.0;
+    _movingBlockMaterial = _createBlockMaterial(_nextBlockColorIndex++);
     _movingBlock =
         Node(
             mesh: Mesh(
               _createBlockGeometry(_towerWidth, _towerDepth),
-              _blockMaterial,
+              _movingBlockMaterial,
             ),
           )
           ..position = vm.Vector3(
@@ -152,7 +174,7 @@ class _BlockySceneState extends State<BlockyScene> {
     );
     _movingBlock.mesh = Mesh(
       _createBlockGeometry(_towerWidth, _towerDepth),
-      _blockMaterial,
+      _movingBlockMaterial,
     );
 
     widget.gameController.startNextBlock();

@@ -17,6 +17,9 @@ class BlockyScene extends StatefulWidget {
 }
 
 class _BlockySceneState extends State<BlockyScene> {
+  static const _initialCameraPositionY = 9.8;
+  static const _initialCameraTargetY = 2.0;
+
   final Scene _scene = Scene();
   late final PhysicallyBasedMaterial _blockMaterial;
   late Node _movingBlock;
@@ -25,8 +28,8 @@ class _BlockySceneState extends State<BlockyScene> {
     // Ajuste position.y para alterar a altura física da câmera.
     // Ajuste target.y para o enquadramento vertical: aumente-o para fazer os
     // blocos aparecerem mais abaixo na tela; diminua-o para fazê-los subir.
-    position: vm.Vector3(0.0, 9.8, -17.0),
-    target: vm.Vector3(0.0, 2.0, 0.0),
+    position: vm.Vector3(0.0, _initialCameraPositionY, -17.0),
+    target: vm.Vector3(0.0, _initialCameraTargetY, 0.0),
   );
 
   bool _isReady = false;
@@ -195,6 +198,26 @@ class _BlockySceneState extends State<BlockyScene> {
         : vm.Vector3(position.x, position.y, clampedCoordinate);
   }
 
+  void _updateCamera(double deltaSeconds) {
+    final interpolation =
+        1 - math.exp(-GameConfig.cameraFollowSpeed * deltaSeconds);
+    final desiredPositionY = _initialCameraPositionY + _towerTopY;
+    final desiredTargetY = _initialCameraTargetY + _towerTopY;
+    final position = _camera.position;
+    final target = _camera.target;
+
+    _camera.position = vm.Vector3(
+      position.x,
+      position.y + (desiredPositionY - position.y) * interpolation,
+      position.z,
+    );
+    _camera.target = vm.Vector3(
+      target.x,
+      target.y + (desiredTargetY - target.y) * interpolation,
+      target.z,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_isReady) return const SizedBox.expand();
@@ -207,7 +230,10 @@ class _BlockySceneState extends State<BlockyScene> {
           _scene,
           camera: _camera,
           autoTick: widget.gameController.isMoving,
-          onTick: (_, deltaSeconds) => _moveBlock(deltaSeconds, limit),
+          onTick: (_, deltaSeconds) {
+            _updateCamera(deltaSeconds);
+            _moveBlock(deltaSeconds, limit);
+          },
         );
       },
     );

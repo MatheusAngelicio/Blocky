@@ -10,4 +10,5 @@ abstract final class GameConfig {
   static const blockVerticalStep = blockHeight + blockGap;
   static const movingBlockCenterY = 0.64;
   static const movingBlockSpeed = 3.5;
+  static const cameraFollowSpeed = 3.5;
 }

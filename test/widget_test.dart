@@ -208,11 +208,14 @@ void main() {
     gameController.startNextBlock(isPerfect: true);
     gameController.endGame();
 
-    expect(gameController.status, GameStatus.gameOver);
+    expect(gameController.status, GameStatus.gameOverPreview);
+    expect(gameController.isShowingGameOverPreview, isTrue);
     expect(gameController.isMoving, isFalse);
     expect(gameController.startNextBlock(), isFalse);
     expect(gameController.score, 1);
     expect(gameController.perfectStreak, 0);
+    gameController.completeGameOverPresentation();
+    expect(gameController.status, GameStatus.gameOver);
     gameController.dispose();
   });
 

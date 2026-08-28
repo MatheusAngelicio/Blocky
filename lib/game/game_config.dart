@@ -55,6 +55,11 @@ abstract final class GameConfig {
   static const backgroundStarMaximumSize = 0.07;
   static const backgroundStarDayOpacity = 0.14;
   static const backgroundStarNightOpacity = 0.62;
+  static const gameOverCameraRevealDuration = Duration(milliseconds: 850);
+  static const gameOverCameraRevealHoldDuration = Duration(milliseconds: 900);
+  static const gameOverCameraFramingPadding = 1.05;
+  // Acima do centro para manter a base da torre perto da parte inferior.
+  static const gameOverCameraTargetHeightRatio = 0.64;
   static const perfectStreakForRecovery = 4;
   static const blocksPerBlockyCoin = 10;
   static const blockyCoinsPerPerfectRecovery = 1;

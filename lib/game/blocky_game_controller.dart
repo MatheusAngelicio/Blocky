@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 
 enum MovingBlockAxis { x, z }
 
-enum GameStatus { playing, gameOver }
+enum GameStatus { playing, gameOverPreview, gameOver }
 
 class BlockyGameController extends ChangeNotifier {
   BlockyGameController({
@@ -41,6 +41,7 @@ class BlockyGameController extends ChangeNotifier {
   bool get isMoving => _isMoving;
   GameStatus get status => _status;
   bool get isGameOver => _status == GameStatus.gameOver;
+  bool get isShowingGameOverPreview => _status == GameStatus.gameOverPreview;
   MovingBlockAxis get movingAxis => _movingAxis;
   int get score => _score;
   int get bestScore => _bestScore;
@@ -76,14 +77,14 @@ class BlockyGameController extends ChangeNotifier {
   }
 
   void stopMovingBlock() {
-    if (isGameOver || !_isMoving) return;
+    if (_status != GameStatus.playing || !_isMoving) return;
 
     _isMoving = false;
     notifyListeners();
   }
 
   bool startNextBlock({bool isPerfect = false}) {
-    if (isGameOver) return false;
+    if (_status != GameStatus.playing) return false;
 
     _score++;
     if (_score % GameConfig.blocksPerBlockyCoin == 0) {
@@ -112,7 +113,7 @@ class BlockyGameController extends ChangeNotifier {
   }
 
   void endGame() {
-    if (isGameOver) return;
+    if (_status != GameStatus.playing) return;
 
     if (_score > _bestScore) {
       _bestScore = _score;
@@ -121,6 +122,13 @@ class BlockyGameController extends ChangeNotifier {
     _clearPerfectFeedback();
     _perfectStreak = 0;
     _isMoving = false;
+    _status = GameStatus.gameOverPreview;
+    notifyListeners();
+  }
+
+  void completeGameOverPresentation() {
+    if (!isShowingGameOverPreview) return;
+
     _status = GameStatus.gameOver;
     notifyListeners();
   }

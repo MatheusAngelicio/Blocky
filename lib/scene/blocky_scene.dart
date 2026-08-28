@@ -59,6 +59,13 @@ class _BlockySceneState extends State<BlockyScene> {
 
   bool _isReady = false;
   bool _hasResolvedPlacement = false;
+  Size _viewportSize = Size.zero;
+  bool _isRevealingGameOver = false;
+  double _gameOverRevealElapsedSeconds = 0.0;
+  late vm.Vector3 _gameOverRevealStartPosition;
+  late vm.Vector3 _gameOverRevealStartTarget;
+  late vm.Vector3 _gameOverRevealEndPosition;
+  late vm.Vector3 _gameOverRevealEndTarget;
   double _movingDirection = 1.0;
   double _towerCenterX = 0.0;
   double _towerCenterZ = 0.0;
@@ -106,8 +113,14 @@ class _BlockySceneState extends State<BlockyScene> {
   void _onGameStateChanged() {
     if (_isReady && widget.gameController.round != _sceneRound) {
       _resetRoundScene();
-    } else if (_isReady && !widget.gameController.isMoving) {
+    } else if (_isReady &&
+        widget.gameController.status == GameStatus.playing &&
+        !widget.gameController.isMoving) {
       _resolveMovingBlockPlacement();
+    }
+
+    if (_isReady && widget.gameController.isShowingGameOverPreview) {
+      _beginGameOverCameraReveal();
     }
 
     if (_isReady) {
@@ -151,8 +164,12 @@ class _BlockySceneState extends State<BlockyScene> {
     _scene.root.addComponent(_physicsWorld!);
     _resetRoundScene();
     _isReady = true;
-    if (!widget.gameController.isMoving) {
+    if (widget.gameController.status == GameStatus.playing &&
+        !widget.gameController.isMoving) {
       _resolveMovingBlockPlacement();
+    }
+    if (widget.gameController.isShowingGameOverPreview) {
+      _beginGameOverCameraReveal();
     }
 
     if (mounted) setState(() {});
@@ -173,6 +190,8 @@ class _BlockySceneState extends State<BlockyScene> {
     _recoveryElapsedSeconds = 0.0;
     _sceneRound = widget.gameController.round;
     _hasResolvedPlacement = false;
+    _isRevealingGameOver = false;
+    _gameOverRevealElapsedSeconds = 0.0;
     _movingDirection = 1.0;
     _towerCenterX = 0.0;
     _towerCenterZ = 0.0;
@@ -1106,6 +1125,87 @@ class _BlockySceneState extends State<BlockyScene> {
         : vm.Vector3(position.x, position.y, clampedCoordinate);
   }
 
+  void _beginGameOverCameraReveal() {
+    if (_isRevealingGameOver) return;
+
+    _isRevealingGameOver = true;
+    _gameOverRevealElapsedSeconds = 0.0;
+    _gameOverRevealStartPosition = vm.Vector3.copy(_camera.position);
+    _gameOverRevealStartTarget = vm.Vector3.copy(_camera.target);
+    final towerBaseY =
+        -GameConfig.blockHeight / 2 -
+        GameConfig.foundationHeight -
+        GameConfig.foundationSlabHeight;
+    final towerTopY = _towerTopY + GameConfig.blockHeight / 2;
+    final towerHeight = math.max(
+      GameConfig.blockHeight,
+      towerTopY - towerBaseY,
+    );
+    _gameOverRevealEndTarget = vm.Vector3(
+      _towerCenterX,
+      towerBaseY + towerHeight * GameConfig.gameOverCameraTargetHeightRatio,
+      _towerCenterZ,
+    );
+
+    final viewDirection =
+        _gameOverRevealStartPosition - _gameOverRevealStartTarget;
+    final currentDistance = viewDirection.length;
+    viewDirection.normalize();
+    final viewportAspectRatio = _viewportSize.height == 0.0
+        ? 0.5
+        : _viewportSize.width / _viewportSize.height;
+    final horizontalFov =
+        2 * math.atan(math.tan(_camera.fovRadiansY / 2) * viewportAspectRatio);
+    final maximumVerticalExtent = math.max(
+      _gameOverRevealEndTarget.y - towerBaseY,
+      towerTopY - _gameOverRevealEndTarget.y,
+    );
+    final distanceNeededForHeight =
+        maximumVerticalExtent / math.tan(_camera.fovRadiansY / 2);
+    final towerFootprint = math.max(
+      GameConfig.foundationSlabWidth,
+      GameConfig.foundationSlabDepth,
+    );
+    final distanceNeededForWidth =
+        towerFootprint / (2 * math.tan(horizontalFov / 2));
+    final revealDistance =
+        math.max(
+          currentDistance,
+          math.max(distanceNeededForHeight, distanceNeededForWidth),
+        ) *
+        GameConfig.gameOverCameraFramingPadding;
+    _gameOverRevealEndPosition =
+        _gameOverRevealEndTarget + viewDirection * revealDistance;
+  }
+
+  void _updateGameOverCameraReveal(double deltaSeconds) {
+    if (!_isRevealingGameOver) return;
+
+    _gameOverRevealElapsedSeconds += deltaSeconds;
+    final revealDuration =
+        GameConfig.gameOverCameraRevealDuration.inMicroseconds /
+        Duration.microsecondsPerSecond;
+    final holdDuration =
+        GameConfig.gameOverCameraRevealHoldDuration.inMicroseconds /
+        Duration.microsecondsPerSecond;
+    final progress = (_gameOverRevealElapsedSeconds / revealDuration)
+        .clamp(0.0, 1.0)
+        .toDouble();
+    final easedProgress = 1.0 - math.pow(1.0 - progress, 3.0).toDouble();
+    _camera.position =
+        _gameOverRevealStartPosition +
+        (_gameOverRevealEndPosition - _gameOverRevealStartPosition) *
+            easedProgress;
+    _camera.target =
+        _gameOverRevealStartTarget +
+        (_gameOverRevealEndTarget - _gameOverRevealStartTarget) * easedProgress;
+
+    if (_gameOverRevealElapsedSeconds < revealDuration + holdDuration) return;
+
+    _isRevealingGameOver = false;
+    widget.gameController.completeGameOverPresentation();
+  }
+
   void _updateCamera(double deltaSeconds) {
     final interpolation =
         1 - math.exp(-GameConfig.cameraFollowSpeed * deltaSeconds);
@@ -1132,6 +1232,7 @@ class _BlockySceneState extends State<BlockyScene> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        _viewportSize = constraints.biggest;
         final limit = _movementLimit(constraints.biggest);
 
         return TickerMode(
@@ -1140,6 +1241,7 @@ class _BlockySceneState extends State<BlockyScene> {
               _fallingPieces.isNotEmpty ||
               _impactBlock != null ||
               _recoveryBlock != null ||
+              _isRevealingGameOver ||
               _perfectWobbles.isNotEmpty ||
               _perfectLightPulses.isNotEmpty ||
               _transientParticleEffects.isNotEmpty,
@@ -1153,6 +1255,7 @@ class _BlockySceneState extends State<BlockyScene> {
                 _updateCamera(deltaSeconds);
                 _moveBlock(deltaSeconds, limit);
               }
+              _updateGameOverCameraReveal(deltaSeconds);
               _updateBackgroundStars(deltaSeconds);
               _updatePlacementImpact(deltaSeconds);
               _updatePerfectRecoveryGrowth(deltaSeconds);

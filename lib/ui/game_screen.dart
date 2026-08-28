@@ -8,7 +8,7 @@ import 'package:blocky/scene/blocky_scene.dart';
 import 'package:flutter/material.dart';
 
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key, this.blockTheme = BlockTheme.chocolate});
+  const GameScreen({super.key, this.blockTheme = BlockTheme.jelly});
 
   final BlockTheme blockTheme;
 

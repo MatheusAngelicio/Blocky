@@ -31,8 +31,10 @@ class BlockyScene extends StatefulWidget {
 }
 
 class _BlockySceneState extends State<BlockyScene> {
-  static const _initialCameraPositionY = 9.8;
-  static const _initialCameraTargetY = 2.0;
+  static const _initialCameraPositionX = -7.0;
+  static const _initialCameraPositionY = 9.4;
+  static const _initialCameraPositionZ = -12.5;
+  static const _initialCameraTargetY = 1.55;
 
   final Scene _scene = Scene();
   late final BlockThemeVisual _blockThemeVisual;
@@ -41,11 +43,16 @@ class _BlockySceneState extends State<BlockyScene> {
   late PhysicallyBasedMaterial _movingBlockMaterial;
   late Node _movingBlock;
   final PerspectiveCamera _camera = PerspectiveCamera(
-    // Aumente o módulo de Z para afastar a câmera; diminua para aproximá-la.
+    // Diminua os módulos de X/Z para aproximar a câmera; mantenha ambos
+    // diferentes de zero para preservar a visão diagonal das duas laterais.
     // Ajuste position.y para alterar a altura física da câmera.
     // Ajuste target.y para o enquadramento vertical: aumente-o para fazer os
     // blocos aparecerem mais abaixo na tela; diminua-o para fazê-los subir.
-    position: vm.Vector3(0.0, _initialCameraPositionY, -17.0),
+    position: vm.Vector3(
+      _initialCameraPositionX,
+      _initialCameraPositionY,
+      _initialCameraPositionZ,
+    ),
     target: vm.Vector3(0.0, _initialCameraTargetY, 0.0),
   );
 
@@ -177,6 +184,45 @@ class _BlockySceneState extends State<BlockyScene> {
     _resetCamera();
 
     final baseBlockColorIndex = _nextBlockColorIndex++;
+    final foundationTopY = -GameConfig.blockHeight / 2;
+    _scene.add(
+      _createBlockNode(
+          width: GameConfig.foundationSlabWidth,
+          depth: GameConfig.foundationSlabDepth,
+          height: GameConfig.foundationSlabHeight,
+          colorIndex: baseBlockColorIndex,
+          material: _blockThemeVisual.createBlockMaterial(
+            colorIndex: baseBlockColorIndex,
+            initialHue: _initialBlockHue,
+            baseColorTexture: _blockBaseColorTexture,
+          ),
+        )
+        ..position = vm.Vector3(
+          GameConfig.foundationSlabOffsetX,
+          foundationTopY -
+              GameConfig.foundationHeight -
+              GameConfig.foundationSlabHeight / 2,
+          GameConfig.foundationSlabOffsetZ,
+        ),
+    );
+    _scene.add(
+      _createBlockNode(
+          width: GameConfig.foundationWidth,
+          depth: GameConfig.foundationDepth,
+          height: GameConfig.foundationHeight,
+          colorIndex: baseBlockColorIndex,
+          material: _blockThemeVisual.createBlockMaterial(
+            colorIndex: baseBlockColorIndex,
+            initialHue: _initialBlockHue,
+            baseColorTexture: _blockBaseColorTexture,
+          ),
+        )
+        ..position = vm.Vector3(
+          0.0,
+          foundationTopY - GameConfig.foundationHeight / 2,
+          0.0,
+        ),
+    );
     _scene.add(
       _createBlockNode(
         width: GameConfig.blockWidth,
@@ -193,22 +239,31 @@ class _BlockySceneState extends State<BlockyScene> {
   }
 
   void _resetCamera() {
-    _camera.position = vm.Vector3(0.0, _initialCameraPositionY, -17.0);
+    _camera.position = vm.Vector3(
+      _initialCameraPositionX,
+      _initialCameraPositionY,
+      _initialCameraPositionZ,
+    );
     _camera.target = vm.Vector3(0.0, _initialCameraTargetY, 0.0);
   }
 
-  MeshGeometry _createBlockGeometry(double width, double depth) {
-    return CuboidGeometry(vm.Vector3(width, GameConfig.blockHeight, depth));
+  MeshGeometry _createBlockGeometry(
+    double width,
+    double depth, {
+    double height = GameConfig.blockHeight,
+  }) {
+    return CuboidGeometry(vm.Vector3(width, height, depth));
   }
 
   Node _createBlockNode({
     required double width,
     required double depth,
+    double height = GameConfig.blockHeight,
     required int colorIndex,
     required PhysicallyBasedMaterial material,
   }) {
     final block = Node(
-      mesh: Mesh(_createBlockGeometry(width, depth), material),
+      mesh: Mesh(_createBlockGeometry(width, depth, height: height), material),
     );
     final topFaceShade =
         Node(
@@ -217,7 +272,7 @@ class _BlockySceneState extends State<BlockyScene> {
               _createTopFaceShadeMaterial(colorIndex),
             ),
           )
-          ..position = vm.Vector3(0.0, GameConfig.blockHeight / 2 + 0.003, 0.0)
+          ..position = vm.Vector3(0.0, height / 2 + 0.003, 0.0)
           // A camada recebe a luz e as sombras da cena, mas não deve projetar uma
           // segunda sombra sobre a torre.
           ..castsShadows = false;

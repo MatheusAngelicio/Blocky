@@ -326,31 +326,42 @@ void main() {
     gameController.dispose();
   });
 
-  test('tracks consecutive perfect placements and resets on a normal one', () {
-    final gameController = BlockyGameController();
+  test(
+    'keeps the perfect streak after recovery readiness until a normal placement',
+    () {
+      final gameController = BlockyGameController();
 
-    gameController.startNextBlock(isPerfect: true);
-    expect(gameController.perfectStreak, 1);
-    expect(gameController.perfectFeedbackText, 'PERFECT!');
+      gameController.startNextBlock(isPerfect: true);
+      expect(gameController.perfectStreak, 1);
+      expect(gameController.perfectFeedbackText, 'PERFECT!');
 
-    gameController.startNextBlock(isPerfect: true);
-    expect(gameController.perfectStreak, 2);
-    expect(gameController.perfectFeedbackText, 'PERFECT! x2');
+      gameController.startNextBlock(isPerfect: true);
+      expect(gameController.perfectStreak, 2);
+      expect(gameController.perfectFeedbackText, 'PERFECT! x2');
 
-    gameController.startNextBlock(isPerfect: true);
-    gameController.startNextBlock(isPerfect: true);
-    expect(gameController.perfectStreak, GameConfig.perfectStreakForRecovery);
-    expect(gameController.perfectFeedbackText, 'PERFECT! x4');
+      gameController.startNextBlock(isPerfect: true);
+      gameController.startNextBlock(isPerfect: true);
+      expect(gameController.perfectStreak, GameConfig.perfectStreakForRecovery);
+      expect(gameController.perfectFeedbackText, 'PERFECT! x4');
 
-    expect(gameController.consumePerfectRecovery(), isTrue);
-    expect(gameController.perfectStreak, 0);
-    expect(gameController.perfectFeedbackText, 'PERFECT RECOVERY!');
+      expect(gameController.isPerfectRecoveryReady, isTrue);
+      gameController.showPerfectRecoveryFeedback();
+      expect(gameController.perfectStreak, GameConfig.perfectStreakForRecovery);
+      expect(gameController.perfectFeedbackText, 'PERFECT RECOVERY!');
 
-    gameController.startNextBlock();
-    expect(gameController.perfectStreak, 0);
-    expect(gameController.isShowingPerfect, isFalse);
-    gameController.dispose();
-  });
+      gameController.startNextBlock(isPerfect: true);
+      expect(
+        gameController.perfectStreak,
+        GameConfig.perfectStreakForRecovery + 1,
+      );
+      expect(gameController.isPerfectRecoveryReady, isTrue);
+
+      gameController.startNextBlock();
+      expect(gameController.perfectStreak, 0);
+      expect(gameController.isShowingPerfect, isFalse);
+      gameController.dispose();
+    },
+  );
 
   test('cycles block colors through deterministic hue steps', () {
     const initialHue = 37.0;

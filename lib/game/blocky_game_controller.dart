@@ -37,6 +37,8 @@ class BlockyGameController extends ChangeNotifier {
   int get bestScore => _bestScore;
   int get round => _round;
   int get perfectStreak => _perfectStreak;
+  bool get isPerfectRecoveryReady =>
+      _perfectStreak >= GameConfig.perfectStreakForRecovery;
   bool get isShowingPerfect => _isShowingPerfect;
   String get perfectFeedbackText => _perfectFeedbackText;
 
@@ -75,13 +77,9 @@ class BlockyGameController extends ChangeNotifier {
     return true;
   }
 
-  bool consumePerfectRecovery() {
-    if (_perfectStreak != GameConfig.perfectStreakForRecovery) return false;
-
-    _perfectStreak = 0;
+  void showPerfectRecoveryFeedback() {
     _showPerfectRecoveryFeedback();
     notifyListeners();
-    return true;
   }
 
   void endGame() {

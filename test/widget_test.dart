@@ -7,11 +7,22 @@ import 'package:blocky/game/game_config.dart';
 import 'package:blocky/game/game_haptics.dart';
 import 'package:blocky/game/game_sound.dart';
 import 'package:blocky/scene/block_theme_visual.dart';
+import 'package:blocky/app/blocky_app.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('shows the arcade home before starting a game', (tester) async {
+    await tester.pumpWidget(const BlockyApp());
+
+    expect(find.text('BLOCKY'), findsOneWidget);
+    expect(find.text('COINS'), findsOneWidget);
+    expect(find.text('BEST'), findsOneWidget);
+    expect(find.text('PLAY'), findsOneWidget);
+    expect(find.text('BLOCK THEME'), findsOneWidget);
+  });
 
   test('uses distinct haptic feedback for each gameplay event', () async {
     final feedbackTypes = <String>[];

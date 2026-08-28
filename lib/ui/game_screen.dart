@@ -62,13 +62,49 @@ class _GameScreenState extends State<GameScreen> {
                   padding: const EdgeInsets.only(top: 24),
                   child: Align(
                     alignment: Alignment.topCenter,
-                    child: Text(
-                      '${_gameController.score}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.5,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 22,
+                        vertical: 9,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xE8282341),
+                        border: Border.all(
+                          color: const Color(0xFFFFD65C),
+                          width: 2,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x99080611),
+                            offset: Offset(3, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'SCORE',
+                            style: TextStyle(
+                              color: Color(0xFFFFD65C),
+                              fontFamily: 'monospace',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.8,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${_gameController.score}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontFamily: 'monospace',
+                              fontSize: 30,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -79,16 +115,38 @@ class _GameScreenState extends State<GameScreen> {
               IgnorePointer(
                 child: SafeArea(
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 88),
+                    padding: const EdgeInsets.only(top: 118),
                     child: Align(
                       alignment: Alignment.topCenter,
-                      child: Text(
-                        _gameController.perfectFeedbackText,
-                        style: const TextStyle(
-                          color: Color(0xFFFFE082),
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.2,
+                      child: Container(
+                        constraints: const BoxConstraints(maxWidth: 290),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xE8282341),
+                          border: Border.all(
+                            color: const Color(0xFF8EE8C5),
+                            width: 2,
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x99080611),
+                              offset: Offset(3, 4),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          _gameController.perfectFeedbackText,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Color(0xFFB7F7D5),
+                            fontFamily: 'monospace',
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.1,
+                          ),
                         ),
                       ),
                     ),

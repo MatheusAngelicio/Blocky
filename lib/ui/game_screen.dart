@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:blocky/audio/asset_game_sound_player.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_config.dart';
@@ -22,6 +24,7 @@ class _GameScreenState extends State<GameScreen> {
     _gameController = BlockyGameController();
     _soundPlayer = AssetGameSoundPlayer();
     _gameController.addListener(_onGameStateChanged);
+    unawaited(_gameController.loadBestScore());
   }
 
   @override
@@ -106,23 +109,19 @@ class _GameScreenState extends State<GameScreen> {
                             ),
                           ),
                           SizedBox(height: 20),
-                          Text(
-                            'SCORE',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.4,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            '${_gameController.score}',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 48,
-                              fontWeight: FontWeight.w800,
-                            ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _GameOverStat(
+                                label: 'SCORE',
+                                value: _gameController.score,
+                              ),
+                              SizedBox(width: 36),
+                              _GameOverStat(
+                                label: 'BEST',
+                                value: _gameController.bestScore,
+                              ),
+                            ],
                           ),
                           SizedBox(height: 28),
                           FilledButton(
@@ -138,6 +137,39 @@ class _GameScreenState extends State<GameScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _GameOverStat extends StatelessWidget {
+  const _GameOverStat({required this.label, required this.value});
+
+  final String label;
+  final int value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.4,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '$value',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 48,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
     );
   }
 }

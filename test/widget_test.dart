@@ -1,6 +1,7 @@
 import 'package:blocky/game/block_color_palette.dart';
 import 'package:blocky/game/block_overlap.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
+import 'package:blocky/game/best_score_storage.dart';
 import 'package:blocky/game/game_config.dart';
 import 'package:blocky/game/game_haptics.dart';
 import 'package:blocky/game/game_sound.dart';
@@ -82,7 +83,9 @@ void main() {
   });
 
   test('ends the game and prevents new blocks after a miss', () {
-    final gameController = BlockyGameController();
+    final gameController = BlockyGameController(
+      bestScoreStorage: _InMemoryBestScoreStorage(),
+    );
 
     gameController.startNextBlock(isPerfect: true);
     gameController.endGame();
@@ -96,7 +99,9 @@ void main() {
   });
 
   test('restarts the game from its initial state', () {
-    final gameController = BlockyGameController();
+    final gameController = BlockyGameController(
+      bestScoreStorage: _InMemoryBestScoreStorage(),
+    );
 
     gameController.startNextBlock(isPerfect: true);
     gameController.endGame();
@@ -109,6 +114,42 @@ void main() {
     expect(gameController.isShowingPerfect, isFalse);
     expect(gameController.perfectStreak, 0);
     expect(gameController.round, 1);
+    gameController.dispose();
+  });
+
+  test('loads and persists a new best score after game over', () async {
+    final storage = _InMemoryBestScoreStorage(3);
+    final gameController = BlockyGameController(bestScoreStorage: storage);
+
+    expect(gameController.bestScore, 0);
+
+    await gameController.loadBestScore();
+    expect(gameController.bestScore, 3);
+
+    for (var score = 0; score < 4; score++) {
+      gameController.startNextBlock();
+    }
+    gameController.endGame();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(gameController.bestScore, 4);
+    expect(storage.storedScore, 4);
+
+    gameController.restartGame();
+    expect(gameController.bestScore, 4);
+    gameController.dispose();
+  });
+
+  test('does not replace a stored best score before it is loaded', () async {
+    final storage = _InMemoryBestScoreStorage(10);
+    final gameController = BlockyGameController(bestScoreStorage: storage);
+
+    gameController.startNextBlock();
+    gameController.endGame();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(gameController.bestScore, 10);
+    expect(storage.storedScore, 10);
     gameController.dispose();
   });
 
@@ -292,4 +333,18 @@ void main() {
 
     expect(overlap.hasOverlap, isFalse);
   });
+}
+
+class _InMemoryBestScoreStorage extends BestScoreStorage {
+  _InMemoryBestScoreStorage([this.storedScore = 0]);
+
+  int storedScore;
+
+  @override
+  Future<int> load() async => storedScore;
+
+  @override
+  Future<void> save(int score) async {
+    storedScore = score;
+  }
 }

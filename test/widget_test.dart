@@ -48,8 +48,12 @@ void main() {
     ]);
   });
 
-  test('provides Classic and Jelly block themes', () {
-    expect(BlockTheme.values, [BlockTheme.classic, BlockTheme.jelly]);
+  test('provides Classic, Jelly, and Chocolate block themes', () {
+    expect(BlockTheme.values, [
+      BlockTheme.classic,
+      BlockTheme.jelly,
+      BlockTheme.chocolate,
+    ]);
     expect(
       BlockThemeVisual.forTheme(BlockTheme.classic),
       same(BlockThemeVisual.classic),
@@ -57,6 +61,10 @@ void main() {
     expect(
       BlockThemeVisual.forTheme(BlockTheme.jelly),
       same(BlockThemeVisual.jelly),
+    );
+    expect(
+      BlockThemeVisual.forTheme(BlockTheme.chocolate),
+      same(BlockThemeVisual.chocolate),
     );
     expect(
       BlockThemeVisual.jelly.placementImpact.motion,
@@ -81,6 +89,20 @@ void main() {
       greaterThan(0),
     );
     expect(BlockThemeVisual.jelly.recoveryGrowthOvershoot, greaterThan(0));
+    expect(BlockThemeVisual.chocolate.baseColorTextureAsset, isNotNull);
+    expect(BlockThemeVisual.chocolate.cutParticles, isNotNull);
+    expect(BlockThemeVisual.chocolate.textureTiling, greaterThan(1));
+    expect(
+      BlockThemeVisual.chocolate.colorProgression.valueVariation,
+      greaterThan(0),
+    );
+
+    final chocolateColors = List.generate(
+      5,
+      (index) =>
+          BlockThemeVisual.chocolate.blockColor(index, initialHue: 160.0),
+    );
+    expect(chocolateColors.toSet().length, greaterThan(1));
   });
 
   test('stops the moving block', () {

@@ -36,6 +36,7 @@ class _BlockySceneState extends State<BlockyScene> {
 
   final Scene _scene = Scene();
   late final BlockThemeVisual _blockThemeVisual;
+  Texture2D? _blockBaseColorTexture;
   PhysicsWorld? _physicsWorld;
   late PhysicallyBasedMaterial _movingBlockMaterial;
   late Node _movingBlock;
@@ -63,7 +64,7 @@ class _BlockySceneState extends State<BlockyScene> {
   late int _movingBlockColorIndex;
   int _sceneRound = -1;
   final List<_FallingPiece> _fallingPieces = [];
-  final List<_PerfectParticleEffect> _perfectParticleEffects = [];
+  final List<_TransientParticleEffect> _transientParticleEffects = [];
   final List<_PerfectWobble> _perfectWobbles = [];
   final Map<Node, Node> _topFaceShades = {};
   Node? _impactBlock;
@@ -105,6 +106,10 @@ class _BlockySceneState extends State<BlockyScene> {
   Future<void> _initializeScene() async {
     await Scene.initializeStaticResources();
     await RapierWorld.ensureInitialized();
+    final baseColorTextureAsset = _blockThemeVisual.baseColorTextureAsset;
+    if (baseColorTextureAsset != null) {
+      _blockBaseColorTexture = await Texture2D.fromAsset(baseColorTextureAsset);
+    }
     if (!mounted) return;
 
     _scene.skybox = Skybox(
@@ -150,7 +155,7 @@ class _BlockySceneState extends State<BlockyScene> {
   void _resetRoundScene() {
     _scene.removeAll();
     _fallingPieces.clear();
-    _perfectParticleEffects.clear();
+    _transientParticleEffects.clear();
     _perfectWobbles.clear();
     _topFaceShades.clear();
     _impactBlock = null;
@@ -180,6 +185,7 @@ class _BlockySceneState extends State<BlockyScene> {
         material: _blockThemeVisual.createBlockMaterial(
           colorIndex: baseBlockColorIndex,
           initialHue: _initialBlockHue,
+          baseColorTexture: _blockBaseColorTexture,
         ),
       ),
     );
@@ -257,6 +263,10 @@ class _BlockySceneState extends State<BlockyScene> {
         1.0,
         0.0,
       ]),
+      // A camada de sombra também usa a textura do bloco. Sem UVs, todos os
+      // vértices amostrariam o mesmo pixel e esconderiam o relevo do
+      // chocolate na face superior.
+      texCoords: Float32List.fromList([0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0]),
       colors: Float32List.fromList([
         1.0,
         1.0,
@@ -280,10 +290,13 @@ class _BlockySceneState extends State<BlockyScene> {
   }
 
   PhysicallyBasedMaterial _createTopFaceShadeMaterial(int colorIndex) {
-    return PhysicallyBasedMaterial()
+    return PhysicallyBasedMaterial(baseColorTexture: _blockBaseColorTexture)
       ..baseColorFactor = _linearBlockColor(colorIndex)
       ..metallicFactor = 0.0
       ..roughnessFactor = 0.78
+      ..baseColorTextureTransform = TextureTransform(
+        scale: vm.Vector2.all(_blockThemeVisual.textureTiling),
+      )
       ..vertexColorWeight = 1.0;
   }
 
@@ -319,6 +332,7 @@ class _BlockySceneState extends State<BlockyScene> {
     _movingBlockMaterial = _blockThemeVisual.createBlockMaterial(
       colorIndex: _movingBlockColorIndex,
       initialHue: _initialBlockHue,
+      baseColorTexture: _blockBaseColorTexture,
     );
     _movingBlock =
         _createBlockNode(
@@ -489,6 +503,11 @@ class _BlockySceneState extends State<BlockyScene> {
 
     final width = movesOnX ? cutRange.length : _towerWidth;
     final depth = movesOnX ? _towerDepth : cutRange.length;
+    _createCutParticleEffect(
+      movesOnX
+          ? vm.Vector3(cutRange.center, position.y, position.z)
+          : vm.Vector3(position.x, position.y, cutRange.center),
+    );
     final movesTowardsPositiveAxis = cutRange.center > overlap.center;
     final outwardDirection = movesTowardsPositiveAxis ? 1.0 : -1.0;
     final linearVelocity = movesOnX
@@ -587,7 +606,29 @@ class _BlockySceneState extends State<BlockyScene> {
     final particles = isRecovery
         ? _blockThemeVisual.perfectRecoveryParticles
         : _blockThemeVisual.perfectParticles;
-    final color = _linearBlockColor(_nextBlockColorIndex - 1, alpha: 0.9);
+    _createTransientParticleEffect(
+      position: position,
+      particles: particles,
+      color: _linearBlockColor(_movingBlockColorIndex, alpha: 0.9),
+    );
+  }
+
+  void _createCutParticleEffect(vm.Vector3 position) {
+    final particles = _blockThemeVisual.cutParticles;
+    if (particles == null) return;
+
+    _createTransientParticleEffect(
+      position: position,
+      particles: particles,
+      color: _linearBlockColor(_movingBlockColorIndex, alpha: 0.95),
+    );
+  }
+
+  void _createTransientParticleEffect({
+    required vm.Vector3 position,
+    required BlockParticleVisual particles,
+    required vm.Vector4 color,
+  }) {
     final transparentColor = vm.Vector4(color.x, color.y, color.z, 0.0);
     final system = ParticleSystem(
       maxParticles: particles.count,
@@ -629,8 +670,8 @@ class _BlockySceneState extends State<BlockyScene> {
       ..addComponent(ParticleEmitterComponent(system: system));
 
     _scene.add(effectNode);
-    _perfectParticleEffects.add(
-      _PerfectParticleEffect(
+    _transientParticleEffects.add(
+      _TransientParticleEffect(
         effectNode,
         particles.effectDuration.inMicroseconds /
             Duration.microsecondsPerSecond,
@@ -638,9 +679,9 @@ class _BlockySceneState extends State<BlockyScene> {
     );
   }
 
-  void _removeExpiredPerfectParticleEffects(double deltaSeconds) {
+  void _removeExpiredTransientParticleEffects(double deltaSeconds) {
     var removedEffect = false;
-    _perfectParticleEffects.removeWhere((effect) {
+    _transientParticleEffects.removeWhere((effect) {
       effect.remainingSeconds -= deltaSeconds;
       if (effect.remainingSeconds > 0.0) return false;
 
@@ -897,7 +938,7 @@ class _BlockySceneState extends State<BlockyScene> {
               _impactBlock != null ||
               _recoveryBlock != null ||
               _perfectWobbles.isNotEmpty ||
-              _perfectParticleEffects.isNotEmpty,
+              _transientParticleEffects.isNotEmpty,
           child: SceneView(
             _scene,
             camera: _camera,
@@ -913,7 +954,7 @@ class _BlockySceneState extends State<BlockyScene> {
               _updatePerfectWobbles(deltaSeconds);
               _updateFallingPieceVisuals(deltaSeconds);
               _removeFallenPieces();
-              _removeExpiredPerfectParticleEffects(deltaSeconds);
+              _removeExpiredTransientParticleEffects(deltaSeconds);
             },
           ),
         );
@@ -922,8 +963,8 @@ class _BlockySceneState extends State<BlockyScene> {
   }
 }
 
-class _PerfectParticleEffect {
-  _PerfectParticleEffect(this.node, this.remainingSeconds);
+class _TransientParticleEffect {
+  _TransientParticleEffect(this.node, this.remainingSeconds);
 
   final Node node;
   double remainingSeconds;

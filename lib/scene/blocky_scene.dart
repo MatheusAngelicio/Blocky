@@ -38,7 +38,6 @@ class _BlockySceneState extends State<BlockyScene> {
 
   final Scene _scene = Scene();
   late final BlockThemeVisual _blockThemeVisual;
-  Texture2D? _blockBaseColorTexture;
   PhysicsWorld? _physicsWorld;
   late PhysicallyBasedMaterial _movingBlockMaterial;
   late Node _movingBlock;
@@ -113,10 +112,6 @@ class _BlockySceneState extends State<BlockyScene> {
   Future<void> _initializeScene() async {
     await Scene.initializeStaticResources();
     await RapierWorld.ensureInitialized();
-    final baseColorTextureAsset = _blockThemeVisual.baseColorTextureAsset;
-    if (baseColorTextureAsset != null) {
-      _blockBaseColorTexture = await Texture2D.fromAsset(baseColorTextureAsset);
-    }
     if (!mounted) return;
 
     _scene.skybox = Skybox(
@@ -194,7 +189,6 @@ class _BlockySceneState extends State<BlockyScene> {
           material: _blockThemeVisual.createBlockMaterial(
             colorIndex: baseBlockColorIndex,
             initialHue: _initialBlockHue,
-            baseColorTexture: _blockBaseColorTexture,
           ),
         )
         ..position = vm.Vector3(
@@ -214,7 +208,6 @@ class _BlockySceneState extends State<BlockyScene> {
           material: _blockThemeVisual.createBlockMaterial(
             colorIndex: baseBlockColorIndex,
             initialHue: _initialBlockHue,
-            baseColorTexture: _blockBaseColorTexture,
           ),
         )
         ..position = vm.Vector3(
@@ -231,7 +224,6 @@ class _BlockySceneState extends State<BlockyScene> {
         material: _blockThemeVisual.createBlockMaterial(
           colorIndex: baseBlockColorIndex,
           initialHue: _initialBlockHue,
-          baseColorTexture: _blockBaseColorTexture,
         ),
       ),
     );
@@ -345,13 +337,10 @@ class _BlockySceneState extends State<BlockyScene> {
   }
 
   PhysicallyBasedMaterial _createTopFaceShadeMaterial(int colorIndex) {
-    return PhysicallyBasedMaterial(baseColorTexture: _blockBaseColorTexture)
+    return PhysicallyBasedMaterial()
       ..baseColorFactor = _linearBlockColor(colorIndex)
       ..metallicFactor = 0.0
       ..roughnessFactor = 0.78
-      ..baseColorTextureTransform = TextureTransform(
-        scale: vm.Vector2.all(_blockThemeVisual.textureTiling),
-      )
       ..vertexColorWeight = 1.0;
   }
 
@@ -387,7 +376,6 @@ class _BlockySceneState extends State<BlockyScene> {
     _movingBlockMaterial = _blockThemeVisual.createBlockMaterial(
       colorIndex: _movingBlockColorIndex,
       initialHue: _initialBlockHue,
-      baseColorTexture: _blockBaseColorTexture,
     );
     _movingBlock =
         _createBlockNode(

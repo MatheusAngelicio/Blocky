@@ -175,8 +175,6 @@ class BlockThemeVisual {
     required this.roughnessFactor,
     required this.materialAlpha,
     required this.transmission,
-    required this.baseColorTextureAsset,
-    required this.textureTiling,
   });
 
   static const classic = BlockThemeVisual(
@@ -238,8 +236,6 @@ class BlockThemeVisual {
     roughnessFactor: 0.65,
     materialAlpha: 1.0,
     transmission: 0.0,
-    baseColorTextureAsset: null,
-    textureTiling: 1.0,
   );
 
   static const jelly = BlockThemeVisual(
@@ -303,8 +299,6 @@ class BlockThemeVisual {
     // opaco para preservar a ordenação de profundidade entre os blocos.
     materialAlpha: 1.0,
     transmission: 0.0,
-    baseColorTextureAsset: null,
-    textureTiling: 1.0,
   );
 
   static const chocolate = BlockThemeVisual(
@@ -382,8 +376,6 @@ class BlockThemeVisual {
     roughnessFactor: 0.42,
     materialAlpha: 1.0,
     transmission: 0.0,
-    baseColorTextureAsset: 'assets/images/chocolate_block_base_color_v2.png',
-    textureTiling: 2.5,
   );
 
   final BlockTheme theme;
@@ -400,8 +392,6 @@ class BlockThemeVisual {
   final double roughnessFactor;
   final double materialAlpha;
   final double transmission;
-  final String? baseColorTextureAsset;
-  final double textureTiling;
 
   static BlockThemeVisual forTheme(BlockTheme theme) => switch (theme) {
     BlockTheme.classic => classic,
@@ -412,11 +402,10 @@ class BlockThemeVisual {
   PhysicallyBasedMaterial createBlockMaterial({
     required int colorIndex,
     required double initialHue,
-    Texture2D? baseColorTexture,
   }) {
     // Temas futuros podem configurar texturas e outros parâmetros do material
     // neste ponto, sem modificar as regras da partida.
-    return PhysicallyBasedMaterial(baseColorTexture: baseColorTexture)
+    return PhysicallyBasedMaterial()
       ..baseColorFactor = blockColor(
         colorIndex,
         initialHue: initialHue,
@@ -424,9 +413,6 @@ class BlockThemeVisual {
       )
       ..metallicFactor = metallicFactor
       ..roughnessFactor = roughnessFactor
-      ..baseColorTextureTransform = TextureTransform(
-        scale: vm.Vector2.all(textureTiling),
-      )
       ..alphaMode = materialAlpha < 1.0 ? AlphaMode.blend : AlphaMode.opaque
       ..transmission = transmission
       ..ior = 1.33;

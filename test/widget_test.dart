@@ -1,6 +1,7 @@
 import 'package:blocky/game/block_color_palette.dart';
 import 'package:blocky/game/block_overlap.dart';
 import 'package:blocky/game/block_theme.dart';
+import 'package:blocky/game/block_theme_storage.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/best_score_storage.dart';
 import 'package:blocky/game/game_config.dart';
@@ -100,9 +101,7 @@ void main() {
       greaterThan(0),
     );
     expect(BlockThemeVisual.jelly.recoveryGrowthOvershoot, greaterThan(0));
-    expect(BlockThemeVisual.chocolate.baseColorTextureAsset, isNotNull);
     expect(BlockThemeVisual.chocolate.cutParticles, isNotNull);
-    expect(BlockThemeVisual.chocolate.textureTiling, greaterThan(1));
     expect(
       BlockThemeVisual.chocolate.colorProgression.valueVariation,
       greaterThan(0),
@@ -114,6 +113,16 @@ void main() {
           BlockThemeVisual.chocolate.blockColor(index, initialHue: 160.0),
     );
     expect(chocolateColors.toSet().length, greaterThan(1));
+  });
+
+  test('restores the most recently selected block theme', () async {
+    final storage = _InMemoryBlockThemeStorage();
+
+    expect(await storage.load(), BlockTheme.jelly);
+
+    await storage.save(BlockTheme.chocolate);
+
+    expect(await storage.load(), BlockTheme.chocolate);
   });
 
   test('stops the moving block', () {
@@ -416,5 +425,17 @@ class _InMemoryBestScoreStorage extends BestScoreStorage {
   @override
   Future<void> save(int score) async {
     storedScore = score;
+  }
+}
+
+class _InMemoryBlockThemeStorage extends BlockThemeStorage {
+  BlockTheme selectedTheme = BlockTheme.jelly;
+
+  @override
+  Future<BlockTheme> load() async => selectedTheme;
+
+  @override
+  Future<void> save(BlockTheme theme) async {
+    selectedTheme = theme;
   }
 }

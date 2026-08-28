@@ -1,5 +1,6 @@
 import 'package:blocky/game/best_score_storage.dart';
 import 'package:blocky/game/block_theme.dart';
+import 'package:blocky/game/block_theme_storage.dart';
 import 'package:blocky/ui/game_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -13,6 +14,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final BestScoreStorage _bestScoreStorage = BestScoreStorage();
+  final BlockThemeStorage _blockThemeStorage = BlockThemeStorage();
   BlockTheme _selectedTheme = BlockTheme.jelly;
   int _bestScore = 0;
 
@@ -20,6 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadBestScore();
+    _loadSelectedTheme();
   }
 
   Future<void> _loadBestScore() async {
@@ -27,6 +30,13 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
 
     setState(() => _bestScore = bestScore);
+  }
+
+  Future<void> _loadSelectedTheme() async {
+    final selectedTheme = await _blockThemeStorage.load();
+    if (!mounted) return;
+
+    setState(() => _selectedTheme = selectedTheme);
   }
 
   Future<void> _startGame() async {
@@ -48,6 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (selectedTheme == null || !mounted) return;
 
     setState(() => _selectedTheme = selectedTheme);
+    await _blockThemeStorage.save(selectedTheme);
   }
 
   @override

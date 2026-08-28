@@ -20,6 +20,7 @@ class BlockyGameController extends ChangeNotifier {
   int _round = 0;
   int _perfectStreak = 0;
   bool _isShowingPerfect = false;
+  String _perfectFeedbackText = 'PERFECT!';
   Timer? _perfectFeedbackTimer;
 
   bool get isMoving => _isMoving;
@@ -30,8 +31,7 @@ class BlockyGameController extends ChangeNotifier {
   int get round => _round;
   int get perfectStreak => _perfectStreak;
   bool get isShowingPerfect => _isShowingPerfect;
-  String get perfectFeedbackText =>
-      _perfectStreak > 1 ? 'PERFECT! x$_perfectStreak' : 'PERFECT!';
+  String get perfectFeedbackText => _perfectFeedbackText;
 
   void stopMovingBlock() {
     if (isGameOver || !_isMoving) return;
@@ -60,6 +60,15 @@ class BlockyGameController extends ChangeNotifier {
     return true;
   }
 
+  bool consumePerfectRecovery() {
+    if (_perfectStreak != GameConfig.perfectStreakForRecovery) return false;
+
+    _perfectStreak = 0;
+    _showPerfectRecoveryFeedback();
+    notifyListeners();
+    return true;
+  }
+
   void endGame() {
     if (isGameOver) return;
 
@@ -83,12 +92,29 @@ class BlockyGameController extends ChangeNotifier {
 
   void _showPerfectFeedback() {
     _perfectFeedbackTimer?.cancel();
+    _perfectFeedbackText = _perfectStreak > 1
+        ? 'PERFECT! x$_perfectStreak'
+        : 'PERFECT!';
     _isShowingPerfect = true;
     _perfectFeedbackTimer = Timer(_perfectFeedbackDuration, () {
       _isShowingPerfect = false;
       _perfectFeedbackTimer = null;
       notifyListeners();
     });
+  }
+
+  void _showPerfectRecoveryFeedback() {
+    _perfectFeedbackTimer?.cancel();
+    _perfectFeedbackText = 'PERFECT RECOVERY!';
+    _isShowingPerfect = true;
+    _perfectFeedbackTimer = Timer(
+      GameConfig.perfectRecoveryFeedbackDuration,
+      () {
+        _isShowingPerfect = false;
+        _perfectFeedbackTimer = null;
+        notifyListeners();
+      },
+    );
   }
 
   void _clearPerfectFeedback() {

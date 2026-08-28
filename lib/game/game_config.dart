@@ -34,11 +34,32 @@ abstract final class GameConfig {
   static const perfectParticleGravity = 2.0;
   // Distância máxima, em unidades da cena, para considerar um encaixe perfeito.
   static const perfectPlacementTolerance = 0.12;
+  static const perfectStreakForRecovery = 4;
+  static const perfectRecoveryAmount = 0.6;
+  static const perfectRecoveryAnimationDuration = Duration(milliseconds: 220);
+  static const perfectRecoveryFeedbackDuration = Duration(milliseconds: 700);
+  static const perfectRecoveryParticleCount = 18;
+  static const perfectRecoveryParticleLifetime = 0.55;
+  static const perfectRecoveryParticleEffectDuration = Duration(
+    milliseconds: 650,
+  );
+  static const perfectRecoveryParticleEmitterRadius = 0.65;
+  static const perfectRecoveryParticleMinimumSpeed = 0.8;
+  static const perfectRecoveryParticleMaximumSpeed = 1.6;
+  static const perfectRecoveryParticleMinimumSize = 0.045;
+  static const perfectRecoveryParticleMaximumSize = 0.09;
   static const perfectFeedbackDuration = Duration(milliseconds: 700);
 
   static double movingBlockSpeedForScore(int score) {
     return movingBlockMaximumSpeed -
         (movingBlockMaximumSpeed - movingBlockInitialSpeed) *
             math.exp(-score * movingBlockSpeedGrowthRate);
+  }
+
+  static double recoverBlockLength({
+    required double currentLength,
+    required double maximumLength,
+  }) {
+    return math.min(maximumLength, currentLength + perfectRecoveryAmount);
   }
 }

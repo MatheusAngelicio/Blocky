@@ -91,6 +91,23 @@ void main() {
     );
   });
 
+  test('recovers a block length without exceeding its original maximum', () {
+    expect(
+      GameConfig.recoverBlockLength(
+        currentLength: 2.4,
+        maximumLength: GameConfig.blockWidth,
+      ),
+      closeTo(3.0, 0.0001),
+    );
+    expect(
+      GameConfig.recoverBlockLength(
+        currentLength: 3.4,
+        maximumLength: GameConfig.blockWidth,
+      ),
+      GameConfig.blockWidth,
+    );
+  });
+
   test('keeps the placement impact subtle and brief', () {
     expect(GameConfig.placementImpactDuration.inMilliseconds, lessThan(200));
     expect(GameConfig.placementImpactHorizontalScale, lessThan(0.05));
@@ -103,6 +120,21 @@ void main() {
     expect(
       GameConfig.perfectParticleEffectDuration.inMilliseconds,
       lessThan(700),
+    );
+  });
+
+  test('makes recovery feedback more noticeable without slowing the game', () {
+    expect(
+      GameConfig.perfectRecoveryAnimationDuration.inMilliseconds,
+      lessThan(300),
+    );
+    expect(
+      GameConfig.perfectRecoveryParticleCount,
+      greaterThan(GameConfig.perfectParticleCount),
+    );
+    expect(
+      GameConfig.perfectRecoveryParticleEffectDuration.inMilliseconds,
+      lessThan(800),
     );
   });
 
@@ -135,8 +167,12 @@ void main() {
 
     gameController.startNextBlock(isPerfect: true);
     gameController.startNextBlock(isPerfect: true);
-    expect(gameController.perfectStreak, 4);
+    expect(gameController.perfectStreak, GameConfig.perfectStreakForRecovery);
     expect(gameController.perfectFeedbackText, 'PERFECT! x4');
+
+    expect(gameController.consumePerfectRecovery(), isTrue);
+    expect(gameController.perfectStreak, 0);
+    expect(gameController.perfectFeedbackText, 'PERFECT RECOVERY!');
 
     gameController.startNextBlock();
     expect(gameController.perfectStreak, 0);

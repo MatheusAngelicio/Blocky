@@ -44,6 +44,7 @@ class _BlockySceneState extends State<BlockyScene> {
   double _towerTopY = 0.0;
   double _towerWidth = GameConfig.blockWidth;
   double _towerDepth = GameConfig.blockDepth;
+  MovingBlockAxis? _lastReducedAxis;
   final math.Random _random = math.Random();
   late double _initialBlockHue;
   int _nextBlockColorIndex = 0;
@@ -52,6 +53,10 @@ class _BlockySceneState extends State<BlockyScene> {
   final List<_PerfectParticleEffect> _perfectParticleEffects = [];
   Node? _impactBlock;
   double _impactElapsedSeconds = 0.0;
+  Node? _recoveryBlock;
+  MovingBlockAxis? _recoveryAxis;
+  double _recoveryInitialScale = 1.0;
+  double _recoveryElapsedSeconds = 0.0;
 
   @override
   void initState() {
@@ -109,6 +114,9 @@ class _BlockySceneState extends State<BlockyScene> {
     _perfectParticleEffects.clear();
     _impactBlock = null;
     _impactElapsedSeconds = 0.0;
+    _recoveryBlock = null;
+    _recoveryAxis = null;
+    _recoveryElapsedSeconds = 0.0;
     _sceneRound = widget.gameController.round;
     _hasResolvedPlacement = false;
     _movingDirection = 1.0;
@@ -117,6 +125,7 @@ class _BlockySceneState extends State<BlockyScene> {
     _towerTopY = 0.0;
     _towerWidth = GameConfig.blockWidth;
     _towerDepth = GameConfig.blockDepth;
+    _lastReducedAxis = null;
     _initialBlockHue = _random.nextDouble() * 360.0;
     _nextBlockColorIndex = 0;
     _resetCamera();
@@ -230,9 +239,11 @@ class _BlockySceneState extends State<BlockyScene> {
     } else if (movesOnX) {
       _towerCenterX = overlap.center;
       _towerWidth = overlap.length;
+      _lastReducedAxis = MovingBlockAxis.x;
     } else {
       _towerCenterZ = overlap.center;
       _towerDepth = overlap.length;
+      _lastReducedAxis = MovingBlockAxis.z;
     }
     _towerTopY = position.y;
 
@@ -247,14 +258,59 @@ class _BlockySceneState extends State<BlockyScene> {
         _movingBlockMaterial,
       );
     }
-    _playPlacementImpact(_movingBlock);
-    if (isPerfect) {
-      _createPerfectParticleEffect(_movingBlock.position);
-    }
-
     if (widget.gameController.startNextBlock(isPerfect: isPerfect)) {
+      final recovered =
+          widget.gameController.consumePerfectRecovery() &&
+          _applyPerfectRecovery();
+      if (recovered) {
+        _createPerfectParticleEffect(_movingBlock.position, isRecovery: true);
+      } else {
+        _playPlacementImpact(_movingBlock);
+        if (isPerfect) {
+          _createPerfectParticleEffect(_movingBlock.position);
+        }
+      }
       _createMovingBlock();
     }
+  }
+
+  bool _applyPerfectRecovery() {
+    final axis = _lastReducedAxis;
+    if (axis == null) return false;
+
+    final previousLength = axis == MovingBlockAxis.x
+        ? _towerWidth
+        : _towerDepth;
+    switch (_lastReducedAxis) {
+      case MovingBlockAxis.x:
+        _towerWidth = GameConfig.recoverBlockLength(
+          currentLength: _towerWidth,
+          maximumLength: GameConfig.blockWidth,
+        );
+      case MovingBlockAxis.z:
+        _towerDepth = GameConfig.recoverBlockLength(
+          currentLength: _towerDepth,
+          maximumLength: GameConfig.blockDepth,
+        );
+      case null:
+        return false;
+    }
+
+    final recoveredLength = axis == MovingBlockAxis.x
+        ? _towerWidth
+        : _towerDepth;
+    if (recoveredLength == previousLength) return false;
+
+    _movingBlock.mesh = Mesh(
+      _createBlockGeometry(_towerWidth, _towerDepth),
+      _movingBlockMaterial,
+    );
+    _playPerfectRecoveryGrowth(
+      _movingBlock,
+      axis: axis,
+      initialScale: previousLength / recoveredLength,
+    );
+    return true;
   }
 
   void _createFallingPiece({
@@ -341,30 +397,49 @@ class _BlockySceneState extends State<BlockyScene> {
     if (removedPiece && mounted) setState(() {});
   }
 
-  void _createPerfectParticleEffect(vm.Vector3 position) {
+  void _createPerfectParticleEffect(
+    vm.Vector3 position, {
+    bool isRecovery = false,
+  }) {
+    final particleCount = isRecovery
+        ? GameConfig.perfectRecoveryParticleCount
+        : GameConfig.perfectParticleCount;
+    final particleLifetime = isRecovery
+        ? GameConfig.perfectRecoveryParticleLifetime
+        : GameConfig.perfectParticleLifetime;
+    final effectDuration = isRecovery
+        ? GameConfig.perfectRecoveryParticleEffectDuration
+        : GameConfig.perfectParticleEffectDuration;
+    final emitterRadius = isRecovery
+        ? GameConfig.perfectRecoveryParticleEmitterRadius
+        : GameConfig.perfectParticleEmitterRadius;
+    final minimumSpeed = isRecovery
+        ? GameConfig.perfectRecoveryParticleMinimumSpeed
+        : GameConfig.perfectParticleMinimumSpeed;
+    final maximumSpeed = isRecovery
+        ? GameConfig.perfectRecoveryParticleMaximumSpeed
+        : GameConfig.perfectParticleMaximumSpeed;
+    final minimumSize = isRecovery
+        ? GameConfig.perfectRecoveryParticleMinimumSize
+        : GameConfig.perfectParticleMinimumSize;
+    final maximumSize = isRecovery
+        ? GameConfig.perfectRecoveryParticleMaximumSize
+        : GameConfig.perfectParticleMaximumSize;
     final color = _linearBlockColor(_nextBlockColorIndex - 1, alpha: 0.9);
     final transparentColor = vm.Vector4(color.x, color.y, color.z, 0.0);
     final system = ParticleSystem(
-      maxParticles: GameConfig.perfectParticleCount,
+      maxParticles: particleCount,
       shape: SphereEmitterShape(
-        radius: GameConfig.perfectParticleEmitterRadius,
+        radius: emitterRadius,
         surfaceOnly: true,
         hemisphere: true,
       ),
       spawner: Spawner(
-        bursts: const [
-          ParticleBurst(time: 0.0, count: GameConfig.perfectParticleCount),
-        ],
+        bursts: [ParticleBurst(time: 0.0, count: particleCount)],
       ),
-      lifetime: const ConstantFloat(GameConfig.perfectParticleLifetime),
-      startSpeed: const UniformFloat(
-        GameConfig.perfectParticleMinimumSpeed,
-        GameConfig.perfectParticleMaximumSpeed,
-      ),
-      startSize: const UniformFloat(
-        GameConfig.perfectParticleMinimumSize,
-        GameConfig.perfectParticleMaximumSize,
-      ),
+      lifetime: ConstantFloat(particleLifetime),
+      startSpeed: UniformFloat(minimumSpeed, maximumSpeed),
+      startSize: UniformFloat(minimumSize, maximumSize),
       startColor: ConstantColor(color),
       gravity: vm.Vector3(0.0, -GameConfig.perfectParticleGravity, 0.0),
       looping: false,
@@ -395,8 +470,7 @@ class _BlockySceneState extends State<BlockyScene> {
     _perfectParticleEffects.add(
       _PerfectParticleEffect(
         effectNode,
-        GameConfig.perfectParticleEffectDuration.inMicroseconds /
-            Duration.microsecondsPerSecond,
+        effectDuration.inMicroseconds / Duration.microsecondsPerSecond,
       ),
     );
   }
@@ -441,6 +515,50 @@ class _BlockySceneState extends State<BlockyScene> {
       block.scale = vm.Vector3.all(1.0);
       _impactBlock = null;
     }
+  }
+
+  void _playPerfectRecoveryGrowth(
+    Node block, {
+    required MovingBlockAxis axis,
+    required double initialScale,
+  }) {
+    _recoveryBlock = block;
+    _recoveryAxis = axis;
+    _recoveryInitialScale = initialScale;
+    _recoveryElapsedSeconds = 0.0;
+    _setRecoveryScale(block, initialScale);
+  }
+
+  void _updatePerfectRecoveryGrowth(double deltaSeconds) {
+    final block = _recoveryBlock;
+    final axis = _recoveryAxis;
+    if (block == null || axis == null) return;
+
+    _recoveryElapsedSeconds += deltaSeconds;
+    final duration =
+        GameConfig.perfectRecoveryAnimationDuration.inMicroseconds /
+        Duration.microsecondsPerSecond;
+    final progress = (_recoveryElapsedSeconds / duration)
+        .clamp(0.0, 1.0)
+        .toDouble();
+    final easedProgress = 1.0 - math.pow(1.0 - progress, 3.0).toDouble();
+    final scale =
+        _recoveryInitialScale + (1.0 - _recoveryInitialScale) * easedProgress;
+    _setRecoveryScale(block, scale);
+
+    if (progress == 1.0) {
+      block.scale = vm.Vector3.all(1.0);
+      _recoveryBlock = null;
+      _recoveryAxis = null;
+    }
+  }
+
+  void _setRecoveryScale(Node block, double scale) {
+    block.scale = switch (_recoveryAxis) {
+      MovingBlockAxis.x => vm.Vector3(scale, 1.0, 1.0),
+      MovingBlockAxis.z => vm.Vector3(1.0, 1.0, scale),
+      null => vm.Vector3.all(1.0),
+    };
   }
 
   double _movementLimit(Size viewport) {
@@ -517,6 +635,7 @@ class _BlockySceneState extends State<BlockyScene> {
               widget.gameController.isMoving ||
               _fallingPieces.isNotEmpty ||
               _impactBlock != null ||
+              _recoveryBlock != null ||
               _perfectParticleEffects.isNotEmpty,
           child: SceneView(
             _scene,
@@ -529,6 +648,7 @@ class _BlockySceneState extends State<BlockyScene> {
                 _moveBlock(deltaSeconds, limit);
               }
               _updatePlacementImpact(deltaSeconds);
+              _updatePerfectRecoveryGrowth(deltaSeconds);
               _removeFallenPieces();
               _removeExpiredPerfectParticleEffects(deltaSeconds);
             },

@@ -73,6 +73,7 @@ class _BlockySceneState extends State<BlockyScene> {
   int _sceneRound = -1;
   final List<_FallingPiece> _fallingPieces = [];
   final List<_TransientParticleEffect> _transientParticleEffects = [];
+  final List<_PerfectLightPulse> _perfectLightPulses = [];
   final List<_PerfectWobble> _perfectWobbles = [];
   final Map<Node, Node> _topFaceShades = {};
   Node? _impactBlock;
@@ -160,6 +161,7 @@ class _BlockySceneState extends State<BlockyScene> {
     _scene.removeAll();
     _fallingPieces.clear();
     _transientParticleEffects.clear();
+    _perfectLightPulses.clear();
     _perfectWobbles.clear();
     _topFaceShades.clear();
     _impactBlock = null;
@@ -472,11 +474,9 @@ class _BlockySceneState extends State<BlockyScene> {
         _createPerfectParticleEffect(_movingBlock.position, isRecovery: true);
       } else {
         _playPlacementImpact(_movingBlock);
-        if (isPerfect) {
-          _createPerfectParticleEffect(_movingBlock.position);
-        }
       }
       if (isPerfect) {
+        _createPerfectLightPulse(_movingBlock);
         _playPerfectWobble(_movingBlock);
       }
       GameHaptics.trigger(
@@ -658,6 +658,87 @@ class _BlockySceneState extends State<BlockyScene> {
       particles: particles,
       color: _linearBlockColor(_movingBlockColorIndex, alpha: 0.9),
     );
+  }
+
+  void _createPerfectLightPulse(Node block) {
+    final color = _linearBlockColor(_movingBlockColorIndex);
+    final material = PhysicallyBasedMaterial()
+      ..baseColorFactor = vm.Vector4(color.x, color.y, color.z, 0.0)
+      ..emissiveFactor = vm.Vector4(color.x, color.y, color.z, 1.0)
+      ..emissiveStrength = GameConfig.perfectLightPulseEmissiveStrength
+      ..metallicFactor = 0.0
+      ..roughnessFactor = 1.0
+      ..alphaMode = AlphaMode.blend;
+    final pulse =
+        Node(
+            mesh: Mesh(
+              CuboidGeometry(
+                vm.Vector3(
+                  _towerWidth,
+                  GameConfig.perfectLightPulseHeight,
+                  _towerDepth,
+                ),
+              ),
+              material,
+            ),
+          )
+          ..position = vm.Vector3(
+            block.position.x,
+            block.position.y -
+                GameConfig.blockHeight / 2 -
+                GameConfig.blockGap / 2,
+            block.position.z,
+          )
+          ..scale = vm.Vector3(
+            GameConfig.perfectLightPulseInitialScale,
+            1.0,
+            GameConfig.perfectLightPulseInitialScale,
+          )
+          ..castsShadows = false;
+
+    _scene.add(pulse);
+    _perfectLightPulses.add(
+      _PerfectLightPulse(node: pulse, material: material, color: color),
+    );
+  }
+
+  void _updatePerfectLightPulses(double deltaSeconds) {
+    if (_perfectLightPulses.isEmpty) return;
+
+    final duration =
+        GameConfig.perfectLightPulseDuration.inMicroseconds /
+        Duration.microsecondsPerSecond;
+    var completedEffect = false;
+    _perfectLightPulses.removeWhere((pulse) {
+      pulse.elapsedSeconds += deltaSeconds;
+      final progress = (pulse.elapsedSeconds / duration)
+          .clamp(0.0, 1.0)
+          .toDouble();
+      final scale =
+          GameConfig.perfectLightPulseInitialScale +
+          (GameConfig.perfectLightPulseFinalScale -
+                  GameConfig.perfectLightPulseInitialScale) *
+              (1.0 - math.pow(1.0 - progress, 3.0).toDouble());
+      final opacity =
+          GameConfig.perfectLightPulseOpacity *
+          math.pow(1.0 - progress, 1.7).toDouble();
+
+      pulse.node.scale = vm.Vector3(scale, 1.0, scale);
+      pulse.material.baseColorFactor = vm.Vector4(
+        pulse.color.x,
+        pulse.color.y,
+        pulse.color.z,
+        opacity,
+      );
+
+      if (progress < 1.0) return false;
+
+      _scene.remove(pulse.node);
+      completedEffect = true;
+      return true;
+    });
+
+    if (completedEffect && mounted) setState(() {});
   }
 
   void _createCutParticleEffect(vm.Vector3 position) {
@@ -985,6 +1066,7 @@ class _BlockySceneState extends State<BlockyScene> {
               _impactBlock != null ||
               _recoveryBlock != null ||
               _perfectWobbles.isNotEmpty ||
+              _perfectLightPulses.isNotEmpty ||
               _transientParticleEffects.isNotEmpty,
           child: SceneView(
             _scene,
@@ -999,6 +1081,7 @@ class _BlockySceneState extends State<BlockyScene> {
               _updatePlacementImpact(deltaSeconds);
               _updatePerfectRecoveryGrowth(deltaSeconds);
               _updatePerfectWobbles(deltaSeconds);
+              _updatePerfectLightPulses(deltaSeconds);
               _updateFallingPieceVisuals(deltaSeconds);
               _removeFallenPieces();
               _removeExpiredTransientParticleEffects(deltaSeconds);
@@ -1015,6 +1098,19 @@ class _TransientParticleEffect {
 
   final Node node;
   double remainingSeconds;
+}
+
+class _PerfectLightPulse {
+  _PerfectLightPulse({
+    required this.node,
+    required this.material,
+    required this.color,
+  });
+
+  final Node node;
+  final PhysicallyBasedMaterial material;
+  final vm.Vector4 color;
+  double elapsedSeconds = 0.0;
 }
 
 class _PerfectWobble {

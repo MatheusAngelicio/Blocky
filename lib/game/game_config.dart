@@ -39,6 +39,13 @@ abstract final class GameConfig {
   static const perfectParticleGravity = 2.0;
   // Distância máxima, em unidades da cena, para considerar um encaixe perfeito.
   static const perfectPlacementTolerance = 0.12;
+  // Pulso visual exibido sob um bloco encaixado perfeitamente.
+  static const perfectLightPulseDuration = Duration(milliseconds: 260);
+  static const perfectLightPulseInitialScale = 0.72;
+  static const perfectLightPulseFinalScale = 1.3;
+  static const perfectLightPulseHeight = 0.018;
+  static const perfectLightPulseOpacity = 0.78;
+  static const perfectLightPulseEmissiveStrength = 2.2;
   static const perfectStreakForRecovery = 4;
   static const perfectRecoveryAmount = 0.6;
   static const perfectRecoveryAnimationDuration = Duration(milliseconds: 220);

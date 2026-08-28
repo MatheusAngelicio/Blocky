@@ -8,6 +8,7 @@ import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_config.dart';
 import 'package:blocky/game/game_sound.dart';
 import 'package:blocky/scene/block_theme_visual.dart';
+import 'package:blocky/scene/sky_progression.dart';
 import 'package:flutter/widgets.dart' hide BoxShape;
 import 'package:flutter_scene/physics.dart';
 import 'package:flutter_scene/scene.dart';
@@ -38,6 +39,7 @@ class _BlockySceneState extends State<BlockyScene> {
 
   final Scene _scene = Scene();
   late final BlockThemeVisual _blockThemeVisual;
+  late final GradientSkySource _skySource;
   PhysicsWorld? _physicsWorld;
   late PhysicallyBasedMaterial _movingBlockMaterial;
   late Node _movingBlock;
@@ -106,6 +108,10 @@ class _BlockySceneState extends State<BlockyScene> {
       _resolveMovingBlockPlacement();
     }
 
+    if (_isReady) {
+      SkyProgression.applyTo(_skySource, widget.gameController.score);
+    }
+
     if (mounted) setState(() {});
   }
 
@@ -114,16 +120,12 @@ class _BlockySceneState extends State<BlockyScene> {
     await RapierWorld.ensureInitialized();
     if (!mounted) return;
 
-    _scene.skybox = Skybox(
-      GradientSkySource(
-        zenithColor: vm.Vector3(0.34, 0.73, 0.52),
-        horizonColor: vm.Vector3(0.48, 0.80, 0.48),
-        groundColor: vm.Vector3(0.62, 0.86, 0.36),
-        sunDirection: vm.Vector3(-0.45, 0.75, -0.5),
-        sunColor: vm.Vector3(1.5, 1.4, 1.1),
-        sunSharpness: 1200.0,
-      ),
+    _skySource = GradientSkySource(
+      sunDirection: vm.Vector3(-0.45, 0.75, -0.5),
+      sunSharpness: 1200.0,
     );
+    SkyProgression.applyTo(_skySource, widget.gameController.score);
+    _scene.skybox = Skybox(_skySource);
     _scene.directionalLight = DirectionalLight(
       direction: vm.Vector3(-0.45, -1.0, -0.5),
       intensity: 2.1,
@@ -177,6 +179,7 @@ class _BlockySceneState extends State<BlockyScene> {
     _initialBlockHue = _random.nextDouble() * 360.0;
     _nextBlockColorIndex = 0;
     _resetCamera();
+    SkyProgression.applyTo(_skySource, widget.gameController.score);
 
     final baseBlockColorIndex = _nextBlockColorIndex++;
     final foundationTopY = -GameConfig.blockHeight / 2;

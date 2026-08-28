@@ -8,6 +8,7 @@ import 'package:blocky/game/game_config.dart';
 import 'package:blocky/game/game_haptics.dart';
 import 'package:blocky/game/game_sound.dart';
 import 'package:blocky/scene/block_theme_visual.dart';
+import 'package:blocky/scene/sky_progression.dart';
 import 'package:blocky/app/blocky_app.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -123,6 +124,17 @@ void main() {
     await storage.save(BlockTheme.chocolate);
 
     expect(await storage.load(), BlockTheme.chocolate);
+  });
+
+  test('interpolates the background from daylight to night', () {
+    final daylight = SkyProgression.paletteForScore(0);
+    final transition = SkyProgression.paletteForScore(40);
+    final night = SkyProgression.paletteForScore(80);
+
+    expect(daylight.zenith, isNot(transition.zenith));
+    expect(transition.zenith, isNot(night.zenith));
+    expect(night.zenith.x, lessThan(daylight.zenith.x));
+    expect(night.zenith.y, lessThan(daylight.zenith.y));
   });
 
   test('stops the moving block', () {

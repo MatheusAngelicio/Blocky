@@ -1,6 +1,7 @@
 import 'package:blocky/game/best_score_storage.dart';
 import 'package:blocky/game/block_theme.dart';
 import 'package:blocky/game/block_theme_storage.dart';
+import 'package:blocky/scene/sky_progression.dart';
 import 'package:blocky/ui/game_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -66,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final themeColor = _themeAccent(_selectedTheme);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF151225),
+      backgroundColor: SkyProgression.homeBackgroundColor,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(

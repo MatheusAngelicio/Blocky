@@ -3,6 +3,7 @@ import 'package:blocky/game/block_overlap.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_config.dart';
 import 'package:blocky/game/game_haptics.dart';
+import 'package:blocky/game/game_sound.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -31,6 +32,16 @@ void main() {
       'HapticFeedbackType.lightImpact',
       'HapticFeedbackType.mediumImpact',
       'HapticFeedbackType.heavyImpact',
+    ]);
+  });
+
+  test('declares every required gameplay sound asset', () {
+    expect(GameSound.values, [
+      GameSound.placement,
+      GameSound.cut,
+      GameSound.perfect,
+      GameSound.perfectRecovery,
+      GameSound.gameOver,
     ]);
   });
 

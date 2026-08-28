@@ -1,5 +1,7 @@
+import 'package:blocky/audio/asset_game_sound_player.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_config.dart';
+import 'package:blocky/game/game_sound.dart';
 import 'package:blocky/scene/blocky_scene.dart';
 import 'package:flutter/material.dart';
 
@@ -12,11 +14,13 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   late final BlockyGameController _gameController;
+  late final GameSoundPlayer _soundPlayer;
 
   @override
   void initState() {
     super.initState();
     _gameController = BlockyGameController();
+    _soundPlayer = AssetGameSoundPlayer();
     _gameController.addListener(_onGameStateChanged);
   }
 
@@ -24,6 +28,7 @@ class _GameScreenState extends State<GameScreen> {
   void dispose() {
     _gameController.removeListener(_onGameStateChanged);
     _gameController.dispose();
+    _soundPlayer.dispose();
     super.dispose();
   }
 
@@ -41,7 +46,10 @@ class _GameScreenState extends State<GameScreen> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            BlockyScene(gameController: _gameController),
+            BlockyScene(
+              gameController: _gameController,
+              soundPlayer: _soundPlayer,
+            ),
             IgnorePointer(
               child: SafeArea(
                 child: Padding(

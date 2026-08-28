@@ -5,6 +5,7 @@ import 'package:blocky/game/game_haptics.dart';
 import 'package:blocky/game/block_overlap.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_config.dart';
+import 'package:blocky/game/game_sound.dart';
 import 'package:flutter/widgets.dart' hide BoxShape;
 import 'package:flutter_scene/physics.dart';
 import 'package:flutter_scene/scene.dart';
@@ -12,9 +13,14 @@ import 'package:flutter_scene_rapier/flutter_scene_rapier.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
 class BlockyScene extends StatefulWidget {
-  const BlockyScene({super.key, required this.gameController});
+  const BlockyScene({
+    super.key,
+    required this.gameController,
+    required this.soundPlayer,
+  });
 
   final BlockyGameController gameController;
+  final GameSoundPlayer soundPlayer;
 
   @override
   State<BlockyScene> createState() => _BlockySceneState();
@@ -217,6 +223,7 @@ class _BlockySceneState extends State<BlockyScene> {
       _movingBlock.visible = false;
       widget.gameController.endGame();
       GameHaptics.trigger(GameHapticEvent.gameOver);
+      widget.soundPlayer.play(GameSound.gameOver);
       return;
     }
 
@@ -232,6 +239,7 @@ class _BlockySceneState extends State<BlockyScene> {
         overlap: overlap,
         position: position,
       );
+      widget.soundPlayer.play(GameSound.cut);
     }
 
     if (isPerfect && movesOnX) {
@@ -278,6 +286,13 @@ class _BlockySceneState extends State<BlockyScene> {
             : isPerfect
             ? GameHapticEvent.perfect
             : GameHapticEvent.placement,
+      );
+      widget.soundPlayer.play(
+        recovered
+            ? GameSound.perfectRecovery
+            : isPerfect
+            ? GameSound.perfect
+            : GameSound.placement,
       );
       _createMovingBlock();
     }

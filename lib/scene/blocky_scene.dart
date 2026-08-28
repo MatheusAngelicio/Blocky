@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:blocky/game/block_color_palette.dart';
+import 'package:blocky/game/game_haptics.dart';
 import 'package:blocky/game/block_overlap.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_config.dart';
@@ -215,6 +216,7 @@ class _BlockySceneState extends State<BlockyScene> {
     if (!overlap.hasOverlap) {
       _movingBlock.visible = false;
       widget.gameController.endGame();
+      GameHaptics.trigger(GameHapticEvent.gameOver);
       return;
     }
 
@@ -270,6 +272,13 @@ class _BlockySceneState extends State<BlockyScene> {
           _createPerfectParticleEffect(_movingBlock.position);
         }
       }
+      GameHaptics.trigger(
+        recovered
+            ? GameHapticEvent.perfectRecovery
+            : isPerfect
+            ? GameHapticEvent.perfect
+            : GameHapticEvent.placement,
+      );
       _createMovingBlock();
     }
   }

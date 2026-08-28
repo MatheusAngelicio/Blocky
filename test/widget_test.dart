@@ -2,9 +2,38 @@ import 'package:blocky/game/block_color_palette.dart';
 import 'package:blocky/game/block_overlap.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_config.dart';
+import 'package:blocky/game/game_haptics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('uses distinct haptic feedback for each gameplay event', () async {
+    final feedbackTypes = <String>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          feedbackTypes.add(call.arguments! as String);
+          return null;
+        });
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+
+    for (final event in GameHapticEvent.values) {
+      GameHaptics.trigger(event);
+    }
+    await Future<void>.delayed(Duration.zero);
+
+    expect(feedbackTypes, [
+      'HapticFeedbackType.selectionClick',
+      'HapticFeedbackType.lightImpact',
+      'HapticFeedbackType.mediumImpact',
+      'HapticFeedbackType.heavyImpact',
+    ]);
+  });
+
   test('stops the moving block', () {
     final gameController = BlockyGameController();
 

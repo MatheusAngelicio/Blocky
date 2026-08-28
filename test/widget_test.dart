@@ -48,12 +48,39 @@ void main() {
     ]);
   });
 
-  test('uses Classic as the only currently available block theme', () {
-    expect(BlockTheme.values, [BlockTheme.classic]);
+  test('provides Classic and Jelly block themes', () {
+    expect(BlockTheme.values, [BlockTheme.classic, BlockTheme.jelly]);
     expect(
       BlockThemeVisual.forTheme(BlockTheme.classic),
       same(BlockThemeVisual.classic),
     );
+    expect(
+      BlockThemeVisual.forTheme(BlockTheme.jelly),
+      same(BlockThemeVisual.jelly),
+    );
+    expect(
+      BlockThemeVisual.jelly.placementImpact.motion,
+      BlockImpactMotion.squashAndStretch,
+    );
+    expect(
+      BlockThemeVisual.jelly.roughnessFactor,
+      BlockThemeVisual.classic.roughnessFactor,
+    );
+    expect(BlockThemeVisual.jelly.materialAlpha, 1.0);
+    expect(BlockThemeVisual.jelly.transmission, 0.0);
+    expect(
+      BlockThemeVisual.jelly.fallingVisual.wobbleAmplitude,
+      greaterThan(0),
+    );
+    expect(
+      BlockThemeVisual.jelly.perfectWobble.translationAmplitude,
+      greaterThan(0),
+    );
+    expect(
+      BlockThemeVisual.jelly.perfectWobble.rotationAmplitude,
+      greaterThan(0),
+    );
+    expect(BlockThemeVisual.jelly.recoveryGrowthOvershoot, greaterThan(0));
   });
 
   test('stops the moving block', () {
@@ -284,7 +311,7 @@ void main() {
 
     expect(nextColor, isNot(firstColor));
     expect(
-      BlockColorPalette.colorForBlock(20, initialHue: initialHue),
+      BlockColorPalette.colorForBlock(45, initialHue: initialHue),
       firstColor,
     );
   });

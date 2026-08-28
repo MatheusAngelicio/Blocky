@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:blocky/audio/asset_game_sound_player.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
-import 'package:blocky/game/game_config.dart';
 import 'package:blocky/game/game_sound.dart';
 import 'package:blocky/game/block_theme.dart';
 import 'package:blocky/scene/blocky_scene.dart';
@@ -45,7 +44,7 @@ class _GameScreenState extends State<GameScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: GameConfig.backgroundColor,
+      backgroundColor: const Color(0xFF7ECF8D),
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTapDown: (_) => _gameController.stopMovingBlock(),

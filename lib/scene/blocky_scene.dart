@@ -1,11 +1,12 @@
 import 'dart:math' as math;
 
-import 'package:blocky/game/block_color_palette.dart';
+import 'package:blocky/game/block_theme.dart';
 import 'package:blocky/game/game_haptics.dart';
 import 'package:blocky/game/block_overlap.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_config.dart';
 import 'package:blocky/game/game_sound.dart';
+import 'package:blocky/scene/block_theme_visual.dart';
 import 'package:flutter/widgets.dart' hide BoxShape;
 import 'package:flutter_scene/physics.dart';
 import 'package:flutter_scene/scene.dart';
@@ -17,10 +18,12 @@ class BlockyScene extends StatefulWidget {
     super.key,
     required this.gameController,
     required this.soundPlayer,
+    required this.blockTheme,
   });
 
   final BlockyGameController gameController;
   final GameSoundPlayer soundPlayer;
+  final BlockTheme blockTheme;
 
   @override
   State<BlockyScene> createState() => _BlockySceneState();
@@ -31,6 +34,7 @@ class _BlockySceneState extends State<BlockyScene> {
   static const _initialCameraTargetY = 2.0;
 
   final Scene _scene = Scene();
+  late final BlockThemeVisual _blockThemeVisual;
   PhysicsWorld? _physicsWorld;
   late PhysicallyBasedMaterial _movingBlockMaterial;
   late Node _movingBlock;
@@ -68,6 +72,7 @@ class _BlockySceneState extends State<BlockyScene> {
   @override
   void initState() {
     super.initState();
+    _blockThemeVisual = BlockThemeVisual.forTheme(widget.blockTheme);
     widget.gameController.addListener(_onGameStateChanged);
     _initializeScene();
   }
@@ -141,7 +146,10 @@ class _BlockySceneState extends State<BlockyScene> {
       Node(
         mesh: Mesh(
           _createBlockGeometry(GameConfig.blockWidth, GameConfig.blockDepth),
-          _createBlockMaterial(_nextBlockColorIndex++),
+          _blockThemeVisual.createBlockMaterial(
+            colorIndex: _nextBlockColorIndex++,
+            initialHue: _initialBlockHue,
+          ),
         ),
       ),
     );
@@ -157,37 +165,21 @@ class _BlockySceneState extends State<BlockyScene> {
     return CuboidGeometry(vm.Vector3(width, GameConfig.blockHeight, depth));
   }
 
-  PhysicallyBasedMaterial _createBlockMaterial(int colorIndex) {
-    return PhysicallyBasedMaterial()
-      ..baseColorFactor = _linearBlockColor(colorIndex)
-      ..metallicFactor = 0.05
-      ..roughnessFactor = 0.65;
-  }
-
   vm.Vector4 _linearBlockColor(int colorIndex, {double alpha = 1.0}) {
-    final color = BlockColorPalette.colorForBlock(
+    return _blockThemeVisual.blockColor(
       colorIndex,
       initialHue: _initialBlockHue,
+      alpha: alpha,
     );
-
-    return vm.Vector4(
-      _sRgbToLinear(color.r),
-      _sRgbToLinear(color.g),
-      _sRgbToLinear(color.b),
-      alpha,
-    );
-  }
-
-  double _sRgbToLinear(double value) {
-    if (value <= 0.04045) return value / 12.92;
-
-    return math.pow((value + 0.055) / 1.055, 2.4).toDouble();
   }
 
   void _createMovingBlock() {
     _hasResolvedPlacement = false;
     _movingDirection = 1.0;
-    _movingBlockMaterial = _createBlockMaterial(_nextBlockColorIndex++);
+    _movingBlockMaterial = _blockThemeVisual.createBlockMaterial(
+      colorIndex: _nextBlockColorIndex++,
+      initialHue: _initialBlockHue,
+    );
     _movingBlock =
         Node(
             mesh: Mesh(
@@ -223,7 +215,7 @@ class _BlockySceneState extends State<BlockyScene> {
       _movingBlock.visible = false;
       widget.gameController.endGame();
       GameHaptics.trigger(GameHapticEvent.gameOver);
-      widget.soundPlayer.play(GameSound.gameOver);
+      widget.soundPlayer.play(_blockThemeVisual.sounds.gameOver);
       return;
     }
 
@@ -239,7 +231,7 @@ class _BlockySceneState extends State<BlockyScene> {
         overlap: overlap,
         position: position,
       );
-      widget.soundPlayer.play(GameSound.cut);
+      widget.soundPlayer.play(_blockThemeVisual.sounds.cut);
     }
 
     if (isPerfect && movesOnX) {
@@ -289,10 +281,10 @@ class _BlockySceneState extends State<BlockyScene> {
       );
       widget.soundPlayer.play(
         recovered
-            ? GameSound.perfectRecovery
+            ? _blockThemeVisual.sounds.perfectRecovery
             : isPerfect
-            ? GameSound.perfect
-            : GameSound.placement,
+            ? _blockThemeVisual.sounds.perfect
+            : _blockThemeVisual.sounds.placement,
       );
       _createMovingBlock();
     }
@@ -425,47 +417,26 @@ class _BlockySceneState extends State<BlockyScene> {
     vm.Vector3 position, {
     bool isRecovery = false,
   }) {
-    final particleCount = isRecovery
-        ? GameConfig.perfectRecoveryParticleCount
-        : GameConfig.perfectParticleCount;
-    final particleLifetime = isRecovery
-        ? GameConfig.perfectRecoveryParticleLifetime
-        : GameConfig.perfectParticleLifetime;
-    final effectDuration = isRecovery
-        ? GameConfig.perfectRecoveryParticleEffectDuration
-        : GameConfig.perfectParticleEffectDuration;
-    final emitterRadius = isRecovery
-        ? GameConfig.perfectRecoveryParticleEmitterRadius
-        : GameConfig.perfectParticleEmitterRadius;
-    final minimumSpeed = isRecovery
-        ? GameConfig.perfectRecoveryParticleMinimumSpeed
-        : GameConfig.perfectParticleMinimumSpeed;
-    final maximumSpeed = isRecovery
-        ? GameConfig.perfectRecoveryParticleMaximumSpeed
-        : GameConfig.perfectParticleMaximumSpeed;
-    final minimumSize = isRecovery
-        ? GameConfig.perfectRecoveryParticleMinimumSize
-        : GameConfig.perfectParticleMinimumSize;
-    final maximumSize = isRecovery
-        ? GameConfig.perfectRecoveryParticleMaximumSize
-        : GameConfig.perfectParticleMaximumSize;
+    final particles = isRecovery
+        ? _blockThemeVisual.perfectRecoveryParticles
+        : _blockThemeVisual.perfectParticles;
     final color = _linearBlockColor(_nextBlockColorIndex - 1, alpha: 0.9);
     final transparentColor = vm.Vector4(color.x, color.y, color.z, 0.0);
     final system = ParticleSystem(
-      maxParticles: particleCount,
+      maxParticles: particles.count,
       shape: SphereEmitterShape(
-        radius: emitterRadius,
+        radius: particles.emitterRadius,
         surfaceOnly: true,
         hemisphere: true,
       ),
       spawner: Spawner(
-        bursts: [ParticleBurst(time: 0.0, count: particleCount)],
+        bursts: [ParticleBurst(time: 0.0, count: particles.count)],
       ),
-      lifetime: ConstantFloat(particleLifetime),
-      startSpeed: UniformFloat(minimumSpeed, maximumSpeed),
-      startSize: UniformFloat(minimumSize, maximumSize),
+      lifetime: ConstantFloat(particles.lifetime),
+      startSpeed: UniformFloat(particles.minimumSpeed, particles.maximumSpeed),
+      startSize: UniformFloat(particles.minimumSize, particles.maximumSize),
       startColor: ConstantColor(color),
-      gravity: vm.Vector3(0.0, -GameConfig.perfectParticleGravity, 0.0),
+      gravity: vm.Vector3(0.0, -particles.gravity, 0.0),
       looping: false,
       duration: 0.01,
       modules: [
@@ -494,7 +465,8 @@ class _BlockySceneState extends State<BlockyScene> {
     _perfectParticleEffects.add(
       _PerfectParticleEffect(
         effectNode,
-        effectDuration.inMicroseconds / Duration.microsecondsPerSecond,
+        particles.effectDuration.inMicroseconds /
+            Duration.microsecondsPerSecond,
       ),
     );
   }
@@ -524,15 +496,15 @@ class _BlockySceneState extends State<BlockyScene> {
     if (block == null) return;
 
     _impactElapsedSeconds += deltaSeconds;
+    final impact = _blockThemeVisual.placementImpact;
     final duration =
-        GameConfig.placementImpactDuration.inMicroseconds /
-        Duration.microsecondsPerSecond;
+        impact.duration.inMicroseconds / Duration.microsecondsPerSecond;
     final progress = (_impactElapsedSeconds / duration).clamp(0.0, 1.0);
     final intensity = math.sin(math.pi * progress);
     block.scale = vm.Vector3(
-      1.0 + GameConfig.placementImpactHorizontalScale * intensity,
-      1.0 - GameConfig.placementImpactVerticalScale * intensity,
-      1.0 + GameConfig.placementImpactHorizontalScale * intensity,
+      1.0 + impact.horizontalScale * intensity,
+      1.0 - impact.verticalScale * intensity,
+      1.0 + impact.horizontalScale * intensity,
     );
 
     if (progress == 1.0) {

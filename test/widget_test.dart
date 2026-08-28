@@ -1,10 +1,12 @@
 import 'package:blocky/game/block_color_palette.dart';
 import 'package:blocky/game/block_overlap.dart';
+import 'package:blocky/game/block_theme.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/best_score_storage.dart';
 import 'package:blocky/game/game_config.dart';
 import 'package:blocky/game/game_haptics.dart';
 import 'package:blocky/game/game_sound.dart';
+import 'package:blocky/scene/block_theme_visual.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -44,6 +46,14 @@ void main() {
       GameSound.perfectRecovery,
       GameSound.gameOver,
     ]);
+  });
+
+  test('uses Classic as the only currently available block theme', () {
+    expect(BlockTheme.values, [BlockTheme.classic]);
+    expect(
+      BlockThemeVisual.forTheme(BlockTheme.classic),
+      same(BlockThemeVisual.classic),
+    );
   });
 
   test('stops the moving block', () {

@@ -4,11 +4,14 @@ import 'package:blocky/audio/asset_game_sound_player.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_config.dart';
 import 'package:blocky/game/game_sound.dart';
+import 'package:blocky/game/block_theme.dart';
 import 'package:blocky/scene/blocky_scene.dart';
 import 'package:flutter/material.dart';
 
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key});
+  const GameScreen({super.key, this.blockTheme = BlockTheme.classic});
+
+  final BlockTheme blockTheme;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -52,6 +55,7 @@ class _GameScreenState extends State<GameScreen> {
             BlockyScene(
               gameController: _gameController,
               soundPlayer: _soundPlayer,
+              blockTheme: widget.blockTheme,
             ),
             IgnorePointer(
               child: SafeArea(

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:blocky/game/blocky_coin_storage.dart';
 import 'package:blocky/game/best_score_storage.dart';
 import 'package:blocky/game/game_config.dart';
 import 'package:flutter/foundation.dart';
@@ -12,16 +13,24 @@ class BlockyGameController extends ChangeNotifier {
   BlockyGameController({
     Duration perfectFeedbackDuration = GameConfig.perfectFeedbackDuration,
     BestScoreStorage? bestScoreStorage,
+    BlockyCoinStorage? blockyCoinStorage,
   }) : _perfectFeedbackDuration = perfectFeedbackDuration,
-       _bestScoreStorage = bestScoreStorage ?? BestScoreStorage();
+       _bestScoreStorage = bestScoreStorage ?? BestScoreStorage(),
+       _blockyCoinStorage = blockyCoinStorage ?? BlockyCoinStorage();
 
   final Duration _perfectFeedbackDuration;
   final BestScoreStorage _bestScoreStorage;
+  final BlockyCoinStorage _blockyCoinStorage;
   bool _isMoving = true;
   GameStatus _status = GameStatus.playing;
   MovingBlockAxis _movingAxis = MovingBlockAxis.x;
   int _score = 0;
   int _bestScore = 0;
+  int _blockyCoins = 0;
+  int _coinsEarnedThisGame = 0;
+  int _pendingCoinCredits = 0;
+  bool _hasLoadedBlockyCoins = false;
+  Future<void> _coinSaveQueue = Future.value();
   int _round = 0;
   int _perfectStreak = 0;
   bool _isShowingPerfect = false;
@@ -35,6 +44,8 @@ class BlockyGameController extends ChangeNotifier {
   MovingBlockAxis get movingAxis => _movingAxis;
   int get score => _score;
   int get bestScore => _bestScore;
+  int get blockyCoins => _blockyCoins;
+  int get coinsEarnedThisGame => _coinsEarnedThisGame;
   int get round => _round;
   int get perfectStreak => _perfectStreak;
   bool get isPerfectRecoveryReady =>
@@ -50,6 +61,20 @@ class BlockyGameController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> loadBlockyCoins() async {
+    final storedCoins = await _blockyCoinStorage.load();
+    if (_isDisposed || _hasLoadedBlockyCoins) return;
+
+    final pendingCoinCredits = _pendingCoinCredits;
+    _blockyCoins = storedCoins + pendingCoinCredits;
+    _pendingCoinCredits = 0;
+    _hasLoadedBlockyCoins = true;
+    if (pendingCoinCredits > 0) {
+      _scheduleBlockyCoinSave();
+    }
+    notifyListeners();
+  }
+
   void stopMovingBlock() {
     if (isGameOver || !_isMoving) return;
 
@@ -61,6 +86,9 @@ class BlockyGameController extends ChangeNotifier {
     if (isGameOver) return false;
 
     _score++;
+    if (_score % GameConfig.blocksPerBlockyCoin == 0) {
+      _awardBlockyCoins(1);
+    }
     if (isPerfect) {
       _perfectStreak++;
       _showPerfectFeedback();
@@ -77,7 +105,8 @@ class BlockyGameController extends ChangeNotifier {
     return true;
   }
 
-  void showPerfectRecoveryFeedback() {
+  void completePerfectRecovery() {
+    _awardBlockyCoins(GameConfig.blockyCoinsPerPerfectRecovery);
     _showPerfectRecoveryFeedback();
     notifyListeners();
   }
@@ -99,6 +128,7 @@ class BlockyGameController extends ChangeNotifier {
   void restartGame() {
     _clearPerfectFeedback();
     _score = 0;
+    _coinsEarnedThisGame = 0;
     _perfectStreak = 0;
     _movingAxis = MovingBlockAxis.x;
     _status = GameStatus.playing;
@@ -146,6 +176,23 @@ class BlockyGameController extends ChangeNotifier {
 
     _bestScore = persistedBestScore;
     notifyListeners();
+  }
+
+  void _awardBlockyCoins(int amount) {
+    _blockyCoins += amount;
+    _coinsEarnedThisGame += amount;
+    if (_hasLoadedBlockyCoins) {
+      _scheduleBlockyCoinSave();
+    } else {
+      _pendingCoinCredits += amount;
+    }
+  }
+
+  void _scheduleBlockyCoinSave() {
+    final coinsToSave = _blockyCoins;
+    _coinSaveQueue = _coinSaveQueue.then(
+      (_) => _blockyCoinStorage.save(coinsToSave),
+    );
   }
 
   @override

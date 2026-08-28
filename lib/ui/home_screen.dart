@@ -1,5 +1,6 @@
 import 'package:blocky/app/blocky_colors.dart';
 import 'package:blocky/game/best_score_storage.dart';
+import 'package:blocky/game/blocky_coin_storage.dart';
 import 'package:blocky/game/block_theme.dart';
 import 'package:blocky/game/block_theme_storage.dart';
 import 'package:blocky/scene/sky_progression.dart';
@@ -16,14 +17,17 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final BestScoreStorage _bestScoreStorage = BestScoreStorage();
+  final BlockyCoinStorage _blockyCoinStorage = BlockyCoinStorage();
   final BlockThemeStorage _blockThemeStorage = BlockThemeStorage();
   BlockTheme _selectedTheme = BlockTheme.jelly;
   int _bestScore = 0;
+  int _blockyCoins = 0;
 
   @override
   void initState() {
     super.initState();
     _loadBestScore();
+    _loadBlockyCoins();
     _loadSelectedTheme();
   }
 
@@ -32,6 +36,13 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
 
     setState(() => _bestScore = bestScore);
+  }
+
+  Future<void> _loadBlockyCoins() async {
+    final blockyCoins = await _blockyCoinStorage.load();
+    if (!mounted) return;
+
+    setState(() => _blockyCoins = blockyCoins);
   }
 
   Future<void> _loadSelectedTheme() async {
@@ -47,7 +58,10 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (_) => GameScreen(blockTheme: _selectedTheme),
       ),
     );
-    if (mounted) _loadBestScore();
+    if (mounted) {
+      _loadBestScore();
+      _loadBlockyCoins();
+    }
   }
 
   Future<void> _showThemeSelector() async {
@@ -106,7 +120,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: _ArcadeStat(label: 'COINS', value: '0'),
+                        child: _ArcadeStat(
+                          label: 'BLOCKY COINS',
+                          value: '$_blockyCoins',
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(

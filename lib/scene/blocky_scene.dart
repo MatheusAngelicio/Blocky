@@ -470,7 +470,7 @@ class _BlockySceneState extends State<BlockyScene> {
           widget.gameController.isPerfectRecoveryReady &&
           _applyPerfectRecovery();
       if (recovered) {
-        widget.gameController.showPerfectRecoveryFeedback();
+        widget.gameController.completePerfectRecovery();
         _createPerfectParticleEffect(_movingBlock.position, isRecovery: true);
       } else {
         _playPlacementImpact(_movingBlock);

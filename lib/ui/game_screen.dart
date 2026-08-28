@@ -28,6 +28,7 @@ class _GameScreenState extends State<GameScreen> {
     _soundPlayer = AssetGameSoundPlayer();
     _gameController.addListener(_onGameStateChanged);
     unawaited(_gameController.loadBestScore());
+    unawaited(_gameController.loadBlockyCoins());
   }
 
   @override
@@ -214,6 +215,17 @@ class _GameScreenState extends State<GameScreen> {
                                   value: _gameController.bestScore,
                                 ),
                               ],
+                            ),
+                            const SizedBox(height: 18),
+                            Text(
+                              '+ ${_gameController.coinsEarnedThisGame} BLOCKY COINS',
+                              style: const TextStyle(
+                                color: BlockyColors.primary,
+                                fontFamily: 'monospace',
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.1,
+                              ),
                             ),
                             const SizedBox(height: 28),
                             SizedBox(

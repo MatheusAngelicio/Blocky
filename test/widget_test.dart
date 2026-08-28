@@ -2,6 +2,7 @@ import 'package:blocky/game/block_color_palette.dart';
 import 'package:blocky/game/block_overlap.dart';
 import 'package:blocky/game/block_theme.dart';
 import 'package:blocky/game/block_theme_storage.dart';
+import 'package:blocky/game/blocky_coin_storage.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/best_score_storage.dart';
 import 'package:blocky/game/game_config.dart';
@@ -20,7 +21,7 @@ void main() {
     await tester.pumpWidget(const BlockyApp());
 
     expect(find.text('BLOCKY'), findsOneWidget);
-    expect(find.text('COINS'), findsOneWidget);
+    expect(find.text('BLOCKY COINS'), findsOneWidget);
     expect(find.text('BEST'), findsOneWidget);
     expect(find.text('PLAY'), findsOneWidget);
     expect(find.text('BLOCK THEME'), findsOneWidget);
@@ -172,6 +173,32 @@ void main() {
 
     expect(gameController.score, 1);
   });
+
+  test(
+    'awards Blocky Coins for every ten blocks and a Perfect Recovery',
+    () async {
+      final coinStorage = _InMemoryBlockyCoinStorage(7);
+      final gameController = BlockyGameController(
+        blockyCoinStorage: coinStorage,
+      );
+
+      await gameController.loadBlockyCoins();
+      for (var block = 0; block < GameConfig.blocksPerBlockyCoin; block++) {
+        gameController.startNextBlock();
+      }
+      gameController.completePerfectRecovery();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(gameController.coinsEarnedThisGame, 2);
+      expect(gameController.blockyCoins, 9);
+      expect(coinStorage.storedCoins, 9);
+
+      gameController.restartGame();
+      expect(gameController.coinsEarnedThisGame, 0);
+      expect(gameController.blockyCoins, 9);
+      gameController.dispose();
+    },
+  );
 
   test('ends the game and prevents new blocks after a miss', () {
     final gameController = BlockyGameController(
@@ -345,7 +372,7 @@ void main() {
       expect(gameController.perfectFeedbackText, 'PERFECT! x4');
 
       expect(gameController.isPerfectRecoveryReady, isTrue);
-      gameController.showPerfectRecoveryFeedback();
+      gameController.completePerfectRecovery();
       expect(gameController.perfectStreak, GameConfig.perfectStreakForRecovery);
       expect(gameController.perfectFeedbackText, 'PERFECT RECOVERY!');
 
@@ -448,6 +475,20 @@ class _InMemoryBestScoreStorage extends BestScoreStorage {
   @override
   Future<void> save(int score) async {
     storedScore = score;
+  }
+}
+
+class _InMemoryBlockyCoinStorage extends BlockyCoinStorage {
+  _InMemoryBlockyCoinStorage([this.storedCoins = 0]);
+
+  int storedCoins;
+
+  @override
+  Future<int> load() async => storedCoins;
+
+  @override
+  Future<void> save(int coins) async {
+    storedCoins = coins;
   }
 }
 

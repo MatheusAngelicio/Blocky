@@ -47,6 +47,8 @@ abstract final class GameConfig {
   static const perfectLightPulseOpacity = 0.78;
   static const perfectLightPulseEmissiveStrength = 2.2;
   static const perfectStreakForRecovery = 4;
+  static const blocksPerBlockyCoin = 10;
+  static const blockyCoinsPerPerfectRecovery = 1;
   static const perfectRecoveryAmount = 0.6;
   static const perfectRecoveryAnimationDuration = Duration(milliseconds: 220);
   static const perfectRecoveryFeedbackDuration = Duration(milliseconds: 700);

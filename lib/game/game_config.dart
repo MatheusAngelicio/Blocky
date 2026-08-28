@@ -46,6 +46,15 @@ abstract final class GameConfig {
   static const perfectLightPulseHeight = 0.018;
   static const perfectLightPulseOpacity = 0.78;
   static const perfectLightPulseEmissiveStrength = 2.2;
+  // Pequenas estrelas de fundo reutilizadas durante toda a partida.
+  static const backgroundStarCount = 14;
+  static const backgroundStarFieldWidth = 11.0;
+  static const backgroundStarFieldHeight = 8.0;
+  static const backgroundStarFieldDepth = 6.5;
+  static const backgroundStarMinimumSize = 0.028;
+  static const backgroundStarMaximumSize = 0.07;
+  static const backgroundStarDayOpacity = 0.14;
+  static const backgroundStarNightOpacity = 0.62;
   static const perfectStreakForRecovery = 4;
   static const blocksPerBlockyCoin = 10;
   static const blockyCoinsPerPerfectRecovery = 1;

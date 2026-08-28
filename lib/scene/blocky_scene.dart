@@ -72,6 +72,7 @@ class _BlockySceneState extends State<BlockyScene> {
   late int _movingBlockColorIndex;
   int _sceneRound = -1;
   final List<_FallingPiece> _fallingPieces = [];
+  final List<_BackgroundStar> _backgroundStars = [];
   final List<_TransientParticleEffect> _transientParticleEffects = [];
   final List<_PerfectLightPulse> _perfectLightPulses = [];
   final List<_PerfectWobble> _perfectWobbles = [];
@@ -160,6 +161,7 @@ class _BlockySceneState extends State<BlockyScene> {
   void _resetRoundScene() {
     _scene.removeAll();
     _fallingPieces.clear();
+    _backgroundStars.clear();
     _transientParticleEffects.clear();
     _perfectLightPulses.clear();
     _perfectWobbles.clear();
@@ -182,6 +184,7 @@ class _BlockySceneState extends State<BlockyScene> {
     _nextBlockColorIndex = 0;
     _resetCamera();
     SkyProgression.applyTo(_skySource, widget.gameController.score);
+    _createBackgroundStars();
 
     final baseBlockColorIndex = _nextBlockColorIndex++;
     final foundationTopY = -GameConfig.blockHeight / 2;
@@ -242,6 +245,78 @@ class _BlockySceneState extends State<BlockyScene> {
       _initialCameraPositionZ,
     );
     _camera.target = vm.Vector3(0.0, _initialCameraTargetY, 0.0);
+  }
+
+  void _createBackgroundStars() {
+    for (var index = 0; index < GameConfig.backgroundStarCount; index++) {
+      final size =
+          GameConfig.backgroundStarMinimumSize +
+          _random.nextDouble() *
+              (GameConfig.backgroundStarMaximumSize -
+                  GameConfig.backgroundStarMinimumSize);
+      final material = _createBackgroundStarMaterial();
+      final star = Node(
+        mesh: Mesh(CuboidGeometry(vm.Vector3.all(size)), material),
+      )..castsShadows = false;
+      final backgroundStar = _BackgroundStar(
+        node: star,
+        material: material,
+        horizontalOffset:
+            (_random.nextDouble() - 0.5) * GameConfig.backgroundStarFieldWidth,
+        verticalOffset:
+            (_random.nextDouble() - 0.5) * GameConfig.backgroundStarFieldHeight,
+        depth: GameConfig.backgroundStarFieldDepth + _random.nextDouble() * 0.6,
+        blinkSpeed: 0.8 + _random.nextDouble() * 1.4,
+        blinkPhase: _random.nextDouble() * math.pi * 2,
+      );
+      _backgroundStars.add(backgroundStar);
+      _scene.add(star);
+    }
+  }
+
+  PhysicallyBasedMaterial _createBackgroundStarMaterial() {
+    return PhysicallyBasedMaterial()
+      ..baseColorFactor = vm.Vector4(1.0, 0.96, 0.82, 0.0)
+      ..emissiveFactor = vm.Vector4(1.0, 0.96, 0.82, 1.0)
+      ..emissiveStrength = 1.0
+      ..metallicFactor = 0.0
+      ..roughnessFactor = 1.0
+      ..alphaMode = AlphaMode.blend;
+  }
+
+  void _updateBackgroundStars(double deltaSeconds) {
+    if (_backgroundStars.isEmpty) return;
+
+    final nightProgress = (widget.gameController.score / 80)
+        .clamp(0.0, 1.0)
+        .toDouble();
+    final maximumOpacity =
+        GameConfig.backgroundStarDayOpacity +
+        (GameConfig.backgroundStarNightOpacity -
+                GameConfig.backgroundStarDayOpacity) *
+            nightProgress;
+    for (final star in _backgroundStars) {
+      star.elapsedSeconds += deltaSeconds;
+      final blink = math
+          .pow(
+            (math.sin(star.elapsedSeconds * star.blinkSpeed + star.blinkPhase) +
+                    1.0) /
+                2.0,
+            3.0,
+          )
+          .toDouble();
+      final opacity = maximumOpacity * blink;
+      final scale = 0.7 + blink * 0.55;
+
+      star.node.position = vm.Vector3(
+        star.horizontalOffset,
+        _camera.target.y + star.verticalOffset,
+        star.depth,
+      );
+      star.node.scale = vm.Vector3.all(scale);
+      star.material.baseColorFactor = vm.Vector4(1.0, 0.96, 0.82, opacity);
+      star.material.emissiveStrength = 0.55 + blink * 1.25;
+    }
   }
 
   MeshGeometry _createBlockGeometry(
@@ -1078,6 +1153,7 @@ class _BlockySceneState extends State<BlockyScene> {
                 _updateCamera(deltaSeconds);
                 _moveBlock(deltaSeconds, limit);
               }
+              _updateBackgroundStars(deltaSeconds);
               _updatePlacementImpact(deltaSeconds);
               _updatePerfectRecoveryGrowth(deltaSeconds);
               _updatePerfectWobbles(deltaSeconds);
@@ -1098,6 +1174,27 @@ class _TransientParticleEffect {
 
   final Node node;
   double remainingSeconds;
+}
+
+class _BackgroundStar {
+  _BackgroundStar({
+    required this.node,
+    required this.material,
+    required this.horizontalOffset,
+    required this.verticalOffset,
+    required this.depth,
+    required this.blinkSpeed,
+    required this.blinkPhase,
+  });
+
+  final Node node;
+  final PhysicallyBasedMaterial material;
+  final double horizontalOffset;
+  final double verticalOffset;
+  final double depth;
+  final double blinkSpeed;
+  final double blinkPhase;
+  double elapsedSeconds = 0.0;
 }
 
 class _PerfectLightPulse {

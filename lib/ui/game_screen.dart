@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:blocky/app/blocky_colors.dart';
 import 'package:blocky/audio/asset_game_sound_player.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_sound.dart';
@@ -44,7 +45,7 @@ class _GameScreenState extends State<GameScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF7ECF8D),
+      backgroundColor: BlockyColors.initialSky,
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTapDown: (_) => _gameController.stopMovingBlock(),
@@ -68,14 +69,14 @@ class _GameScreenState extends State<GameScreen> {
                         vertical: 9,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xE8282341),
+                        color: BlockyColors.scorePanel,
                         border: Border.all(
-                          color: const Color(0xFFFFD65C),
+                          color: BlockyColors.primary,
                           width: 2,
                         ),
                         boxShadow: const [
                           BoxShadow(
-                            color: Color(0x99080611),
+                            color: BlockyColors.translucentShadow,
                             offset: Offset(3, 4),
                           ),
                         ],
@@ -86,7 +87,7 @@ class _GameScreenState extends State<GameScreen> {
                           const Text(
                             'SCORE',
                             style: TextStyle(
-                              color: Color(0xFFFFD65C),
+                              color: BlockyColors.primary,
                               fontFamily: 'monospace',
                               fontSize: 12,
                               fontWeight: FontWeight.w900,
@@ -97,7 +98,7 @@ class _GameScreenState extends State<GameScreen> {
                           Text(
                             '${_gameController.score}',
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: BlockyColors.white,
                               fontFamily: 'monospace',
                               fontSize: 30,
                               fontWeight: FontWeight.w900,
@@ -125,14 +126,14 @@ class _GameScreenState extends State<GameScreen> {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xE8282341),
+                          color: BlockyColors.scorePanel,
                           border: Border.all(
-                            color: const Color(0xFF8EE8C5),
+                            color: BlockyColors.perfectBorder,
                             width: 2,
                           ),
                           boxShadow: const [
                             BoxShadow(
-                              color: Color(0x99080611),
+                              color: BlockyColors.translucentShadow,
                               offset: Offset(3, 4),
                             ),
                           ],
@@ -141,7 +142,7 @@ class _GameScreenState extends State<GameScreen> {
                           _gameController.perfectFeedbackText,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            color: Color(0xFFB7F7D5),
+                            color: BlockyColors.perfectText,
                             fontFamily: 'monospace',
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
@@ -156,21 +157,21 @@ class _GameScreenState extends State<GameScreen> {
             if (_gameController.isGameOver)
               Positioned.fill(
                 child: ColoredBox(
-                  color: const Color(0xD6151225),
+                  color: BlockyColors.gameOverOverlay,
                   child: SafeArea(
                     child: Center(
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 28),
                         padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF282341),
+                          color: BlockyColors.panelSurface,
                           border: Border.all(
-                            color: const Color(0xFFFFD65C),
+                            color: BlockyColors.primary,
                             width: 3,
                           ),
                           boxShadow: const [
                             BoxShadow(
-                              color: Color(0xFF080611),
+                              color: BlockyColors.shadow,
                               offset: Offset(6, 7),
                             ),
                           ],
@@ -181,7 +182,7 @@ class _GameScreenState extends State<GameScreen> {
                             const Text(
                               'BLOCKY',
                               style: TextStyle(
-                                color: Color(0xFFFFD65C),
+                                color: BlockyColors.primary,
                                 fontFamily: 'monospace',
                                 fontSize: 24,
                                 fontWeight: FontWeight.w900,
@@ -192,7 +193,7 @@ class _GameScreenState extends State<GameScreen> {
                             const Text(
                               'GAME OVER',
                               style: TextStyle(
-                                color: Colors.white,
+                                color: BlockyColors.white,
                                 fontFamily: 'monospace',
                                 fontSize: 30,
                                 fontWeight: FontWeight.w900,
@@ -219,10 +220,10 @@ class _GameScreenState extends State<GameScreen> {
                               width: double.infinity,
                               child: FilledButton(
                                 style: FilledButton.styleFrom(
-                                  backgroundColor: const Color(0xFFFFD65C),
-                                  foregroundColor: const Color(0xFF171323),
+                                  backgroundColor: BlockyColors.primary,
+                                  foregroundColor: BlockyColors.frame,
                                   side: const BorderSide(
-                                    color: Color(0xFF171323),
+                                    color: BlockyColors.frame,
                                     width: 2,
                                   ),
                                 ),
@@ -235,9 +236,9 @@ class _GameScreenState extends State<GameScreen> {
                               width: double.infinity,
                               child: OutlinedButton(
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFFCEC5E7),
+                                  foregroundColor: BlockyColors.softText,
                                   side: const BorderSide(
-                                    color: Color(0xFF8D82BB),
+                                    color: BlockyColors.secondaryBorder,
                                     width: 2,
                                   ),
                                   shape: const RoundedRectangleBorder(),
@@ -281,7 +282,7 @@ class _GameOverStat extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            color: Colors.white70,
+            color: BlockyColors.muted,
             fontFamily: 'monospace',
             fontSize: 14,
             fontWeight: FontWeight.w700,
@@ -292,7 +293,7 @@ class _GameOverStat extends StatelessWidget {
         Text(
           '$value',
           style: const TextStyle(
-            color: Colors.white,
+            color: BlockyColors.white,
             fontFamily: 'monospace',
             fontSize: 48,
             fontWeight: FontWeight.w800,

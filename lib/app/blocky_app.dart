@@ -1,3 +1,4 @@
+import 'package:blocky/app/blocky_colors.dart';
 import 'package:blocky/ui/home_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -14,9 +15,9 @@ class BlockyApp extends StatelessWidget {
         brightness: Brightness.dark,
         fontFamily: 'monospace',
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFFFFD65C),
-          secondary: Color(0xFF7CE5A2),
-          surface: Color(0xFF211D32),
+          primary: BlockyColors.primary,
+          secondary: BlockyColors.secondary,
+          surface: BlockyColors.modalSurface,
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(

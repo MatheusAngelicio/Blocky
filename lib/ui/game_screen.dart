@@ -98,42 +98,106 @@ class _GameScreenState extends State<GameScreen> {
             if (_gameController.isGameOver)
               Positioned.fill(
                 child: ColoredBox(
-                  color: Color(0xB0101018),
+                  color: const Color(0xD6151225),
                   child: SafeArea(
                     child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Blocky',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 42,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 2.5,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 28),
+                        padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF282341),
+                          border: Border.all(
+                            color: const Color(0xFFFFD65C),
+                            width: 3,
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0xFF080611),
+                              offset: Offset(6, 7),
                             ),
-                          ),
-                          SizedBox(height: 20),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _GameOverStat(
-                                label: 'SCORE',
-                                value: _gameController.score,
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'BLOCKY',
+                              style: TextStyle(
+                                color: Color(0xFFFFD65C),
+                                fontFamily: 'monospace',
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 3,
                               ),
-                              SizedBox(width: 36),
-                              _GameOverStat(
-                                label: 'BEST',
-                                value: _gameController.bestScore,
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'GAME OVER',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontFamily: 'monospace',
+                                fontSize: 30,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 2,
                               ),
-                            ],
-                          ),
-                          SizedBox(height: 28),
-                          FilledButton(
-                            onPressed: _gameController.restartGame,
-                            child: Text('Play Again'),
-                          ),
-                        ],
+                            ),
+                            const SizedBox(height: 24),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _GameOverStat(
+                                  label: 'SCORE',
+                                  value: _gameController.score,
+                                ),
+                                const SizedBox(width: 36),
+                                _GameOverStat(
+                                  label: 'BEST',
+                                  value: _gameController.bestScore,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 28),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFFFFD65C),
+                                  foregroundColor: const Color(0xFF171323),
+                                  side: const BorderSide(
+                                    color: Color(0xFF171323),
+                                    width: 2,
+                                  ),
+                                ),
+                                onPressed: _gameController.restartGame,
+                                child: const Text('PLAY AGAIN'),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFFCEC5E7),
+                                  side: const BorderSide(
+                                    color: Color(0xFF8D82BB),
+                                    width: 2,
+                                  ),
+                                  shape: const RoundedRectangleBorder(),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 15,
+                                  ),
+                                  textStyle: const TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('HOME'),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -160,6 +224,7 @@ class _GameOverStat extends StatelessWidget {
           label,
           style: const TextStyle(
             color: Colors.white70,
+            fontFamily: 'monospace',
             fontSize: 14,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.4,
@@ -170,6 +235,7 @@ class _GameOverStat extends StatelessWidget {
           '$value',
           style: const TextStyle(
             color: Colors.white,
+            fontFamily: 'monospace',
             fontSize: 48,
             fontWeight: FontWeight.w800,
             letterSpacing: 1.4,

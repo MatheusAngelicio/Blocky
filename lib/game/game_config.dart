@@ -19,6 +19,7 @@ abstract final class GameConfig {
   static const movingBlockMaximumSpeed = 7.0;
   static const movingBlockSpeedGrowthRate = 0.07;
   static const cameraFollowSpeed = 3.5;
+  static const cameraHorizontalFollowSpeed = 7.0;
   static const physicsGravity = 9.81;
   static const fallingPieceMass = 0.5;
   static const fallingPieceOutwardSpeed = 1.2;

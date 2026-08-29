@@ -1223,22 +1223,28 @@ class _BlockySceneState extends State<BlockyScene> {
   }
 
   void _updateCamera(double deltaSeconds) {
-    final interpolation =
+    final verticalInterpolation =
         1 - math.exp(-GameConfig.cameraFollowSpeed * deltaSeconds);
+    final horizontalInterpolation =
+        1 - math.exp(-GameConfig.cameraHorizontalFollowSpeed * deltaSeconds);
+    final desiredPositionX = _initialCameraPositionX + _towerCenterX;
     final desiredPositionY = _initialCameraPositionY + _towerTopY;
+    final desiredPositionZ = _initialCameraPositionZ + _towerCenterZ;
+    final desiredTargetX = _towerCenterX;
     final desiredTargetY = _initialCameraTargetY + _towerTopY;
+    final desiredTargetZ = _towerCenterZ;
     final position = _camera.position;
     final target = _camera.target;
 
     _camera.position = vm.Vector3(
-      position.x,
-      position.y + (desiredPositionY - position.y) * interpolation,
-      position.z,
+      position.x + (desiredPositionX - position.x) * horizontalInterpolation,
+      position.y + (desiredPositionY - position.y) * verticalInterpolation,
+      position.z + (desiredPositionZ - position.z) * horizontalInterpolation,
     );
     _camera.target = vm.Vector3(
-      target.x,
-      target.y + (desiredTargetY - target.y) * interpolation,
-      target.z,
+      target.x + (desiredTargetX - target.x) * horizontalInterpolation,
+      target.y + (desiredTargetY - target.y) * verticalInterpolation,
+      target.z + (desiredTargetZ - target.z) * horizontalInterpolation,
     );
   }
 

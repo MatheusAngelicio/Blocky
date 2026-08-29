@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:blocky/app/blocky_colors.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart' as vm;
@@ -8,6 +10,13 @@ abstract final class SkyProgression {
   static const homeBackgroundColor = BlockyColors.initialSky;
 
   static const _scoreToReachNight = 80;
+
+  static final _variations = <SkyProgressionVariation>[
+    SkyProgressionVariation(vm.Vector3(1.0, 1.0, 1.0)),
+    SkyProgressionVariation(vm.Vector3(0.84, 1.02, 1.18)),
+    SkyProgressionVariation(vm.Vector3(1.14, 0.93, 0.86)),
+    SkyProgressionVariation(vm.Vector3(0.93, 1.1, 1.02)),
+  ];
 
   static final _stops = <_SkyStop>[
     _SkyStop(
@@ -66,10 +75,20 @@ abstract final class SkyProgression {
     ),
   ];
 
-  static SkyPalette paletteForScore(int score) {
+  /// Escolhe uma variação controlada da jornada de céu para uma partida.
+  static SkyProgressionVariation randomVariation(math.Random random) {
+    return _variations[random.nextInt(_variations.length)];
+  }
+
+  static SkyPalette paletteForScore(
+    int score, {
+    SkyProgressionVariation? variation,
+  }) {
     final progress = (score / _scoreToReachNight).clamp(0.0, 1.0).toDouble();
     final upperIndex = _stops.indexWhere((stop) => stop.progress >= progress);
-    if (upperIndex <= 0) return _stops.first.palette;
+    if (upperIndex <= 0) {
+      return _stops.first.palette.withVariation(variation);
+    }
 
     final from = _stops[upperIndex - 1];
     final to = _stops[upperIndex];
@@ -77,11 +96,19 @@ abstract final class SkyProgression {
         ((progress - from.progress) / (to.progress - from.progress))
             .clamp(0.0, 1.0)
             .toDouble();
-    return SkyPalette.lerp(from.palette, to.palette, segmentProgress);
+    return SkyPalette.lerp(
+      from.palette,
+      to.palette,
+      segmentProgress,
+    ).withVariation(variation);
   }
 
-  static void applyTo(GradientSkySource sky, int score) {
-    final palette = paletteForScore(score);
+  static void applyTo(
+    GradientSkySource sky,
+    int score, {
+    SkyProgressionVariation? variation,
+  }) {
+    final palette = paletteForScore(score, variation: variation);
     sky.zenithColor = palette.zenith;
     sky.horizonColor = palette.horizon;
     sky.groundColor = palette.ground;
@@ -113,6 +140,27 @@ class SkyPalette {
       sun: blend(from.sun, to.sun),
     );
   }
+
+  SkyPalette withVariation(SkyProgressionVariation? variation) {
+    if (variation == null) return this;
+    return SkyPalette(
+      zenith: _applyScale(zenith, variation.colorScale),
+      horizon: _applyScale(horizon, variation.colorScale),
+      ground: _applyScale(ground, variation.colorScale),
+      sun: _applyScale(sun, variation.colorScale),
+    );
+  }
+
+  static vm.Vector3 _applyScale(vm.Vector3 color, vm.Vector3 scale) {
+    return vm.Vector3(color.x * scale.x, color.y * scale.y, color.z * scale.z);
+  }
+}
+
+/// Mantém a sequência de altitude intacta, alterando apenas seu tom global.
+class SkyProgressionVariation {
+  SkyProgressionVariation(this.colorScale);
+
+  final vm.Vector3 colorScale;
 }
 
 class _SkyStop {

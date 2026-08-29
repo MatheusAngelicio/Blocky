@@ -40,6 +40,7 @@ class _BlockySceneState extends State<BlockyScene> {
   final Scene _scene = Scene();
   late final BlockThemeVisual _blockThemeVisual;
   late final GradientSkySource _skySource;
+  late SkyProgressionVariation _skyVariation;
   PhysicsWorld? _physicsWorld;
   late PhysicallyBasedMaterial _movingBlockMaterial;
   late Node _movingBlock;
@@ -124,7 +125,11 @@ class _BlockySceneState extends State<BlockyScene> {
     }
 
     if (_isReady) {
-      SkyProgression.applyTo(_skySource, widget.gameController.score);
+      SkyProgression.applyTo(
+        _skySource,
+        widget.gameController.score,
+        variation: _skyVariation,
+      );
     }
 
     if (mounted) setState(() {});
@@ -200,9 +205,14 @@ class _BlockySceneState extends State<BlockyScene> {
     _towerDepth = GameConfig.blockDepth;
     _lastReducedAxis = null;
     _initialBlockHue = _random.nextDouble() * 360.0;
+    _skyVariation = SkyProgression.randomVariation(_random);
     _nextBlockColorIndex = 0;
     _resetCamera();
-    SkyProgression.applyTo(_skySource, widget.gameController.score);
+    SkyProgression.applyTo(
+      _skySource,
+      widget.gameController.score,
+      variation: _skyVariation,
+    );
     _createBackgroundStars();
 
     final baseBlockColorIndex = _nextBlockColorIndex++;

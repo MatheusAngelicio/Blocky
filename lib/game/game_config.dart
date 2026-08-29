@@ -7,14 +7,13 @@ abstract final class GameConfig {
   static const blockGap = 0.04;
   static const blockVerticalStep = blockHeight + blockGap;
   // Elementos de cenário iniciais: não participam do overlap da partida.
-  static const foundationWidth = 5.2;
-  static const foundationDepth = 5.2;
-  static const foundationHeight = 0.78;
-  static const foundationSlabWidth = 6.4;
-  static const foundationSlabDepth = 5.8;
-  static const foundationSlabHeight = 0.1;
-  static const foundationSlabOffsetX = -0.45;
-  static const foundationSlabOffsetZ = 0.28;
+  static const foundationWidth = 4.9;
+  static const foundationDepth = 4.9;
+  // Altura do único pedestal inicial. Ajuste este valor para testá-lo.
+  static const foundationHeight = 1.45;
+  static const foundationBaseGlowWidth = 5.16;
+  static const foundationBaseGlowDepth = 5.16;
+  static const foundationBaseGlowHeight = 0.025;
   static const movingBlockCenterY = 0.64;
   static const movingBlockInitialSpeed = 3.5;
   static const movingBlockMaximumSpeed = 7.0;

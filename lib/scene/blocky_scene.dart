@@ -208,23 +208,29 @@ class _BlockySceneState extends State<BlockyScene> {
     final baseBlockColorIndex = _nextBlockColorIndex++;
     final foundationTopY = -GameConfig.blockHeight / 2;
     _scene.add(
-      _createBlockNode(
-          width: GameConfig.foundationSlabWidth,
-          depth: GameConfig.foundationSlabDepth,
-          height: GameConfig.foundationSlabHeight,
-          colorIndex: baseBlockColorIndex,
-          material: _blockThemeVisual.createBlockMaterial(
-            colorIndex: baseBlockColorIndex,
-            initialHue: _initialBlockHue,
+      Node(
+          mesh: Mesh(
+            CuboidGeometry(
+              vm.Vector3(
+                GameConfig.foundationBaseGlowWidth,
+                GameConfig.foundationBaseGlowHeight,
+                GameConfig.foundationBaseGlowDepth,
+              ),
+            ),
+            _createFoundationBaseGlowMaterial(
+              _linearBlockColor(baseBlockColorIndex),
+            ),
           ),
         )
         ..position = vm.Vector3(
-          GameConfig.foundationSlabOffsetX,
+          0.0,
           foundationTopY -
               GameConfig.foundationHeight -
-              GameConfig.foundationSlabHeight / 2,
-          GameConfig.foundationSlabOffsetZ,
-        ),
+              GameConfig.foundationBaseGlowHeight / 2 -
+              0.008,
+          0.0,
+        )
+        ..castsShadows = false,
     );
     _scene.add(
       _createBlockNode(
@@ -344,6 +350,16 @@ class _BlockySceneState extends State<BlockyScene> {
     double height = GameConfig.blockHeight,
   }) {
     return CuboidGeometry(vm.Vector3(width, height, depth));
+  }
+
+  PhysicallyBasedMaterial _createFoundationBaseGlowMaterial(vm.Vector4 color) {
+    return PhysicallyBasedMaterial()
+      ..baseColorFactor = vm.Vector4(color.x, color.y, color.z, 0.48)
+      ..emissiveFactor = vm.Vector4(color.x, color.y, color.z, 1.0)
+      ..emissiveStrength = 1.1
+      ..metallicFactor = 0.0
+      ..roughnessFactor = 0.8
+      ..alphaMode = AlphaMode.blend;
   }
 
   Node _createBlockNode({
@@ -1135,7 +1151,7 @@ class _BlockySceneState extends State<BlockyScene> {
     final towerBaseY =
         -GameConfig.blockHeight / 2 -
         GameConfig.foundationHeight -
-        GameConfig.foundationSlabHeight;
+        GameConfig.foundationBaseGlowHeight;
     final towerTopY = _towerTopY + GameConfig.blockHeight / 2;
     final towerHeight = math.max(
       GameConfig.blockHeight,
@@ -1163,8 +1179,8 @@ class _BlockySceneState extends State<BlockyScene> {
     final distanceNeededForHeight =
         maximumVerticalExtent / math.tan(_camera.fovRadiansY / 2);
     final towerFootprint = math.max(
-      GameConfig.foundationSlabWidth,
-      GameConfig.foundationSlabDepth,
+      GameConfig.foundationWidth,
+      GameConfig.foundationDepth,
     );
     final distanceNeededForWidth =
         towerFootprint / (2 * math.tan(horizontalFov / 2));

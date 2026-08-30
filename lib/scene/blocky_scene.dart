@@ -32,6 +32,11 @@ class BlockyScene extends StatefulWidget {
 }
 
 class _BlockySceneState extends State<BlockyScene> {
+  // Pedaços cortados só precisam colidir com a torre. Separá-los em camadas
+  // evita que vários pedaços fora da tela fiquem simulando colisões entre si.
+  static const _towerCollisionLayer = 0x1;
+  static const _fallingPieceCollisionLayer = 0x2;
+
   static const _initialCameraPositionX = -7.0;
   static const _initialCameraPositionY = 9.4;
   static const _initialCameraPositionZ = -12.5;
@@ -242,34 +247,45 @@ class _BlockySceneState extends State<BlockyScene> {
         )
         ..castsShadows = false,
     );
-    _scene.add(
-      _createBlockNode(
-          width: GameConfig.foundationWidth,
-          depth: GameConfig.foundationDepth,
-          height: GameConfig.foundationHeight,
-          colorIndex: baseBlockColorIndex,
-          material: _blockThemeVisual.createBlockMaterial(
+    final foundation =
+        _createBlockNode(
+            width: GameConfig.foundationWidth,
+            depth: GameConfig.foundationDepth,
+            height: GameConfig.foundationHeight,
             colorIndex: baseBlockColorIndex,
-            initialHue: _initialBlockHue,
-          ),
-        )
-        ..position = vm.Vector3(
-          0.0,
-          foundationTopY - GameConfig.foundationHeight / 2,
-          0.0,
-        ),
+            material: _blockThemeVisual.createBlockMaterial(
+              colorIndex: baseBlockColorIndex,
+              initialHue: _initialBlockHue,
+            ),
+          )
+          ..position = vm.Vector3(
+            0.0,
+            foundationTopY - GameConfig.foundationHeight / 2,
+            0.0,
+          );
+    _addTowerCollider(
+      foundation,
+      width: GameConfig.foundationWidth,
+      depth: GameConfig.foundationDepth,
+      height: GameConfig.foundationHeight,
     );
-    _scene.add(
-      _createBlockNode(
-        width: GameConfig.blockWidth,
-        depth: GameConfig.blockDepth,
+    _scene.add(foundation);
+
+    final baseBlock = _createBlockNode(
+      width: GameConfig.blockWidth,
+      depth: GameConfig.blockDepth,
+      colorIndex: baseBlockColorIndex,
+      material: _blockThemeVisual.createBlockMaterial(
         colorIndex: baseBlockColorIndex,
-        material: _blockThemeVisual.createBlockMaterial(
-          colorIndex: baseBlockColorIndex,
-          initialHue: _initialBlockHue,
-        ),
+        initialHue: _initialBlockHue,
       ),
     );
+    _addTowerCollider(
+      baseBlock,
+      width: GameConfig.blockWidth,
+      depth: GameConfig.blockDepth,
+    );
+    _scene.add(baseBlock);
     _createMovingBlock();
   }
 
@@ -396,6 +412,25 @@ class _BlockySceneState extends State<BlockyScene> {
     block.add(topFaceShade);
     _topFaceShades[block] = topFaceShade;
     return block;
+  }
+
+  void _addTowerCollider(
+    Node block, {
+    required double width,
+    required double depth,
+    double height = GameConfig.blockHeight,
+  }) {
+    block
+      ..addComponent(RigidBody(type: BodyType.fixed))
+      ..addComponent(
+        Collider(
+          shape: BoxShape(
+            halfExtents: vm.Vector3(width / 2, height / 2, depth / 2),
+          ),
+          collisionLayer: _towerCollisionLayer,
+          collisionMask: _fallingPieceCollisionLayer,
+        ),
+      );
   }
 
   MeshGeometry _createTopFaceShadeGeometry(double width, double depth) {
@@ -613,6 +648,7 @@ class _BlockySceneState extends State<BlockyScene> {
             ? _blockThemeVisual.sounds.perfect
             : _blockThemeVisual.sounds.placement,
       );
+      _addTowerCollider(_movingBlock, width: _towerWidth, depth: _towerDepth);
       _createMovingBlock();
     }
   }
@@ -716,7 +752,8 @@ class _BlockySceneState extends State<BlockyScene> {
               angularVelocity: angularVelocity,
             ),
           )
-          // As sobras caem visualmente, mas não colidem com a torre nem entre si.
+          // As sobras colidem com a torre, mas não entre si: isso mantém o
+          // efeito convincente sem deixar objetos fora da tela se acumularem.
           ..addComponent(
             Collider(
               shape: BoxShape(
@@ -726,7 +763,8 @@ class _BlockySceneState extends State<BlockyScene> {
                   depth / 2,
                 ),
               ),
-              collisionMask: 0,
+              collisionLayer: _fallingPieceCollisionLayer,
+              collisionMask: _towerCollisionLayer,
             ),
           );
 

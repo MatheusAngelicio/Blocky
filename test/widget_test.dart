@@ -114,6 +114,10 @@ void main() {
       BlockImpactMotion.firmSettle,
     );
     expect(
+      BlockThemeVisual.chocolate.surfaceDetail,
+      BlockSurfaceDetail.chocolateSegments,
+    );
+    expect(
       BlockThemeVisual.cheese.surfaceDetail,
       BlockSurfaceDetail.cheeseHoles,
     );

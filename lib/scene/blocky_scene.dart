@@ -97,6 +97,9 @@ class _BlockySceneState extends State<BlockyScene> {
     segments: 12,
     rings: 8,
   );
+  late final CuboidGeometry _surfaceDetailUnitCube = CuboidGeometry(
+    vm.Vector3.all(1.0),
+  );
   Node? _impactBlock;
   double _impactElapsedSeconds = 0.0;
   Node? _recoveryBlock;
@@ -456,6 +459,14 @@ class _BlockySceneState extends State<BlockyScene> {
           height: height,
           colorIndex: colorIndex,
         );
+      case BlockSurfaceDetail.chocolateSegments:
+        _addChocolateSegmentDetails(
+          block,
+          width: width,
+          depth: depth,
+          height: height,
+          colorIndex: colorIndex,
+        );
     }
   }
 
@@ -572,6 +583,111 @@ class _BlockySceneState extends State<BlockyScene> {
       )
       ..metallicFactor = 0.0
       ..roughnessFactor = 0.94;
+  }
+
+  void _addChocolateSegmentDetails(
+    Node block, {
+    required double width,
+    required double depth,
+    required double height,
+    required int colorIndex,
+  }) {
+    const grooveThickness = 0.035;
+    const grooveHeight = 0.016;
+    const sideGrooveDepth = 0.014;
+    const inset = 0.07;
+    final columns = width >= 2.6
+        ? 4
+        : width >= 1.45
+        ? 3
+        : width >= 0.5
+        ? 2
+        : 1;
+    final rows = depth >= 2.6
+        ? 4
+        : depth >= 1.45
+        ? 3
+        : depth >= 0.5
+        ? 2
+        : 1;
+    final material = _createChocolateGrooveMaterial(colorIndex);
+    final details = <Node>[];
+
+    for (var column = 1; column < columns; column++) {
+      final x = -width / 2 + width * column / columns;
+      _addSurfaceDetail(
+        block,
+        details,
+        material: material,
+        position: vm.Vector3(x, height / 2 + grooveHeight / 2 + 0.004, 0.0),
+        scale: vm.Vector3(
+          grooveThickness,
+          grooveHeight,
+          math.max(0.01, depth - inset * 2),
+        ),
+      );
+      // Sulco correspondente na face voltada para a câmera.
+      _addSurfaceDetail(
+        block,
+        details,
+        material: material,
+        position: vm.Vector3(x, 0.0, -depth / 2 - sideGrooveDepth / 2),
+        scale: vm.Vector3(grooveThickness, height * 0.9, sideGrooveDepth),
+      );
+    }
+
+    for (var row = 1; row < rows; row++) {
+      final z = -depth / 2 + depth * row / rows;
+      _addSurfaceDetail(
+        block,
+        details,
+        material: material,
+        position: vm.Vector3(0.0, height / 2 + grooveHeight / 2 + 0.004, z),
+        scale: vm.Vector3(
+          math.max(0.01, width - inset * 2),
+          grooveHeight,
+          grooveThickness,
+        ),
+      );
+      _addSurfaceDetail(
+        block,
+        details,
+        material: material,
+        position: vm.Vector3(-width / 2 - sideGrooveDepth / 2, 0.0, z),
+        scale: vm.Vector3(sideGrooveDepth, height * 0.9, grooveThickness),
+      );
+    }
+    _surfaceDetails[block] = details;
+  }
+
+  PhysicallyBasedMaterial _createChocolateGrooveMaterial(int colorIndex) {
+    final color = _linearBlockColor(colorIndex);
+    return PhysicallyBasedMaterial()
+      ..baseColorFactor = vm.Vector4(
+        color.x * 0.62,
+        color.y * 0.48,
+        color.z * 0.33,
+        1.0,
+      )
+      ..metallicFactor = 0.0
+      ..roughnessFactor = 0.6;
+  }
+
+  void _addSurfaceDetail(
+    Node block,
+    List<Node> details, {
+    required PhysicallyBasedMaterial material,
+    required vm.Vector3 position,
+    required vm.Vector3 scale,
+  }) {
+    final detail = Node(mesh: Mesh(_surfaceDetailUnitCube, material))
+      ..position = position
+      ..scale = scale
+      // Um relevo muito baixo, mas que ainda projeta uma sombra de contato,
+      // faz os traços parecerem ranhuras do tablete sem escurecer o material.
+      ..castsShadows = true;
+    block.add(detail);
+    details.add(detail);
   }
 
   void _addTowerCollider(

@@ -62,11 +62,12 @@ void main() {
     ]);
   });
 
-  test('provides Classic, Jelly, and Chocolate block themes', () {
+  test('provides the available block themes with distinct visual behavior', () {
     expect(BlockTheme.values, [
       BlockTheme.classic,
       BlockTheme.jelly,
       BlockTheme.chocolate,
+      BlockTheme.cheese,
     ]);
     expect(
       BlockThemeVisual.forTheme(BlockTheme.classic),
@@ -79,6 +80,10 @@ void main() {
     expect(
       BlockThemeVisual.forTheme(BlockTheme.chocolate),
       same(BlockThemeVisual.chocolate),
+    );
+    expect(
+      BlockThemeVisual.forTheme(BlockTheme.cheese),
+      same(BlockThemeVisual.cheese),
     );
     expect(
       BlockThemeVisual.jelly.placementImpact.motion,
@@ -104,6 +109,19 @@ void main() {
     );
     expect(BlockThemeVisual.jelly.recoveryGrowthOvershoot, greaterThan(0));
     expect(BlockThemeVisual.chocolate.cutParticles, isNotNull);
+    expect(
+      BlockThemeVisual.chocolate.placementImpact.motion,
+      BlockImpactMotion.firmSettle,
+    );
+    expect(
+      BlockThemeVisual.cheese.surfaceDetail,
+      BlockSurfaceDetail.cheeseHoles,
+    );
+    expect(
+      BlockThemeVisual.cheese.placementImpact.motion,
+      BlockImpactMotion.firmSettle,
+    );
+    expect(BlockThemeVisual.cheese.cutParticles, isNotNull);
     expect(
       BlockThemeVisual.chocolate.colorProgression.valueVariation,
       greaterThan(0),

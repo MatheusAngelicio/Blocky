@@ -7,7 +7,13 @@ import 'package:blocky/game/game_sound.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
-enum BlockImpactMotion { standard, squashAndStretch }
+enum BlockImpactMotion { standard, squashAndStretch, firmSettle }
+
+/// Detalhes geométricos leves adicionados sobre o paralelepípedo lógico.
+///
+/// Eles são recriados quando um bloco é cortado, mantendo a regra e o
+/// collider do jogo sempre como uma caixa simples.
+enum BlockSurfaceDetail { none, cheeseHoles }
 
 /// Define uma sequência de cores próxima entre blocos da mesma partida.
 class BlockColorProgression {
@@ -162,6 +168,7 @@ class BlockThemeSounds {
 class BlockThemeVisual {
   const BlockThemeVisual({
     required this.theme,
+    required this.surfaceDetail,
     required this.placementImpact,
     required this.perfectParticles,
     required this.perfectRecoveryParticles,
@@ -179,6 +186,7 @@ class BlockThemeVisual {
 
   static const classic = BlockThemeVisual(
     theme: BlockTheme.classic,
+    surfaceDetail: BlockSurfaceDetail.none,
     placementImpact: BlockImpactVisual(
       motion: BlockImpactMotion.standard,
       duration: GameConfig.placementImpactDuration,
@@ -240,6 +248,7 @@ class BlockThemeVisual {
 
   static const jelly = BlockThemeVisual(
     theme: BlockTheme.jelly,
+    surfaceDetail: BlockSurfaceDetail.none,
     placementImpact: BlockImpactVisual(
       motion: BlockImpactMotion.squashAndStretch,
       duration: Duration(milliseconds: 180),
@@ -303,13 +312,14 @@ class BlockThemeVisual {
 
   static const chocolate = BlockThemeVisual(
     theme: BlockTheme.chocolate,
+    surfaceDetail: BlockSurfaceDetail.none,
     placementImpact: BlockImpactVisual(
-      motion: BlockImpactMotion.standard,
-      duration: GameConfig.placementImpactDuration,
-      horizontalScale: 0.02,
-      verticalScale: 0.05,
-      reboundHorizontalScale: 0.0,
-      reboundVerticalScale: 0.0,
+      motion: BlockImpactMotion.firmSettle,
+      duration: Duration(milliseconds: 105),
+      horizontalScale: 0.014,
+      verticalScale: 0.035,
+      reboundHorizontalScale: 0.006,
+      reboundVerticalScale: 0.012,
     ),
     perfectParticles: BlockParticleVisual(
       count: GameConfig.perfectParticleCount,
@@ -378,7 +388,86 @@ class BlockThemeVisual {
     transmission: 0.0,
   );
 
+  static const cheese = BlockThemeVisual(
+    theme: BlockTheme.cheese,
+    surfaceDetail: BlockSurfaceDetail.cheeseHoles,
+    placementImpact: BlockImpactVisual(
+      motion: BlockImpactMotion.firmSettle,
+      duration: Duration(milliseconds: 145),
+      horizontalScale: 0.018,
+      verticalScale: 0.048,
+      reboundHorizontalScale: 0.009,
+      reboundVerticalScale: 0.016,
+    ),
+    perfectParticles: BlockParticleVisual(
+      count: 8,
+      lifetime: 0.4,
+      effectDuration: Duration(milliseconds: 470),
+      emitterRadius: 0.38,
+      minimumSpeed: 0.42,
+      maximumSpeed: 0.9,
+      minimumSize: 0.028,
+      maximumSize: 0.058,
+      gravity: 3.2,
+    ),
+    perfectRecoveryParticles: BlockParticleVisual(
+      count: 15,
+      lifetime: 0.5,
+      effectDuration: Duration(milliseconds: 580),
+      emitterRadius: 0.55,
+      minimumSpeed: 0.62,
+      maximumSpeed: 1.28,
+      minimumSize: 0.035,
+      maximumSize: 0.075,
+      gravity: 3.4,
+    ),
+    cutParticles: BlockParticleVisual(
+      count: 9,
+      lifetime: 0.42,
+      effectDuration: Duration(milliseconds: 480),
+      emitterRadius: 0.08,
+      minimumSpeed: 0.3,
+      maximumSpeed: 0.72,
+      minimumSize: 0.024,
+      maximumSize: 0.05,
+      gravity: 4.2,
+    ),
+    fallingVisual: BlockFallingVisual(
+      wobbleAmplitude: 0.012,
+      wobbleFrequency: 8.0,
+    ),
+    perfectWobble: BlockPerfectWobbleVisual(
+      duration: Duration(milliseconds: 180),
+      translationAmplitude: 0.022,
+      rotationAmplitude: 0.018,
+    ),
+    recoveryGrowthOvershoot: 0.015,
+    sounds: BlockThemeSounds(
+      placement: GameSound.placement,
+      cut: GameSound.cut,
+      perfect: GameSound.perfect,
+      perfectRecovery: GameSound.perfectRecovery,
+      gameOver: GameSound.gameOver,
+    ),
+    colorProgression: BlockColorProgression(
+      hueStep: 3.5,
+      saturation: 0.69,
+      value: 0.96,
+      initialHueStart: 38.0,
+      initialHueRange: 26.0,
+      hueCycleRange: 26.0,
+      saturationVariation: 0.08,
+      valueVariation: 0.11,
+      variationFrequency: 0.7,
+    ),
+    metallicFactor: 0.0,
+    roughnessFactor: 0.76,
+    materialAlpha: 1.0,
+    transmission: 0.0,
+  );
+
   final BlockTheme theme;
+  final BlockSurfaceDetail surfaceDetail;
   final BlockImpactVisual placementImpact;
   final BlockParticleVisual perfectParticles;
   final BlockParticleVisual perfectRecoveryParticles;
@@ -397,6 +486,7 @@ class BlockThemeVisual {
     BlockTheme.classic => classic,
     BlockTheme.jelly => jelly,
     BlockTheme.chocolate => chocolate,
+    BlockTheme.cheese => cheese,
   };
 
   PhysicallyBasedMaterial createBlockMaterial({

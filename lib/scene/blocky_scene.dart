@@ -90,6 +90,13 @@ class _BlockySceneState extends State<BlockyScene> {
   final List<_PerfectLightPulse> _perfectLightPulses = [];
   final List<_PerfectWobble> _perfectWobbles = [];
   final Map<Node, Node> _topFaceShades = {};
+  final Map<Node, List<Node>> _surfaceDetails = {};
+  final Map<Node, int> _surfaceDetailSeeds = {};
+  late final SphereGeometry _cheeseHoleGeometry = SphereGeometry(
+    radius: 1.0,
+    segments: 12,
+    rings: 8,
+  );
   Node? _impactBlock;
   double _impactElapsedSeconds = 0.0;
   Node? _recoveryBlock;
@@ -193,6 +200,8 @@ class _BlockySceneState extends State<BlockyScene> {
     _perfectLightPulses.clear();
     _perfectWobbles.clear();
     _topFaceShades.clear();
+    _surfaceDetails.clear();
+    _surfaceDetailSeeds.clear();
     _impactBlock = null;
     _impactElapsedSeconds = 0.0;
     _recoveryBlock = null;
@@ -411,7 +420,158 @@ class _BlockySceneState extends State<BlockyScene> {
           ..castsShadows = false;
     block.add(topFaceShade);
     _topFaceShades[block] = topFaceShade;
+    _surfaceDetailSeeds[block] = _random.nextInt(0x7fffffff);
+    _updateBlockSurfaceDetails(
+      block,
+      width: width,
+      depth: depth,
+      height: height,
+      colorIndex: colorIndex,
+    );
     return block;
+  }
+
+  void _updateBlockSurfaceDetails(
+    Node block, {
+    required double width,
+    required double depth,
+    required double height,
+    required int colorIndex,
+  }) {
+    final existingDetails = _surfaceDetails.remove(block);
+    if (existingDetails != null) {
+      for (final detail in existingDetails) {
+        block.remove(detail);
+      }
+    }
+
+    switch (_blockThemeVisual.surfaceDetail) {
+      case BlockSurfaceDetail.none:
+        return;
+      case BlockSurfaceDetail.cheeseHoles:
+        _addCheeseHoleDetails(
+          block,
+          width: width,
+          depth: depth,
+          height: height,
+          colorIndex: colorIndex,
+        );
+    }
+  }
+
+  void _addCheeseHoleDetails(
+    Node block, {
+    required double width,
+    required double depth,
+    required double height,
+    required int colorIndex,
+  }) {
+    final baseRadius = math.min(0.22, math.min(width, depth) * 0.12);
+    if (baseRadius < 0.045) return;
+
+    // Cada bloco recebe sua própria semente, mas ela é reutilizada quando a
+    // geometria é recalculada após o corte. O padrão fica variado e estável.
+    final seed = _surfaceDetailSeeds[block] ??= _random.nextInt(0x7fffffff);
+    final random = math.Random(seed);
+    final maximumTopHoleCount = width * depth < 0.85
+        ? 1
+        : width < 1.1 || depth < 1.1
+        ? 2
+        : 6;
+    final topHoleCount = maximumTopHoleCount < 3
+        ? maximumTopHoleCount
+        : maximumTopHoleCount - 1 + random.nextInt(2);
+    final material = _createCheeseHoleMaterial(colorIndex);
+    final details = <Node>[];
+    for (var index = 0; index < topHoleCount; index++) {
+      final radius = baseRadius * (0.42 + random.nextDouble() * 0.72);
+      final xFactor = -0.34 + random.nextDouble() * 0.68;
+      final zFactor = -0.3 + random.nextDouble() * 0.62;
+      final xStretch = 0.7 + random.nextDouble() * 0.64;
+      final zStretch = 0.7 + random.nextDouble() * 0.64;
+      _addCheeseHole(
+        block,
+        details,
+        material: material,
+        position: vm.Vector3(
+          xFactor * width,
+          height / 2 - radius * 0.22 + 0.016,
+          zFactor * depth,
+        ),
+        scale: vm.Vector3(radius * xStretch, radius * 0.22, radius * zStretch),
+      );
+    }
+
+    final sideHoleCount = topHoleCount > 2 ? 1 + random.nextInt(2) : 1;
+    if (depth >= 0.65) {
+      for (var index = 0; index < sideHoleCount; index++) {
+        final radius = baseRadius * (0.45 + random.nextDouble() * 0.48);
+        final yFactor = -0.24 + random.nextDouble() * 0.5;
+        final zFactor = -0.26 + random.nextDouble() * 0.52;
+        final zStretch = 0.72 + random.nextDouble() * 0.58;
+        _addCheeseHole(
+          block,
+          details,
+          material: material,
+          position: vm.Vector3(
+            -width / 2 + radius * 0.22 - 0.01,
+            yFactor * height,
+            zFactor * depth,
+          ),
+          scale: vm.Vector3(radius * 0.22, radius * 0.88, radius * zStretch),
+        );
+      }
+    }
+    if (width >= 0.65) {
+      for (var index = 0; index < sideHoleCount; index++) {
+        final radius = baseRadius * (0.45 + random.nextDouble() * 0.48);
+        final xFactor = -0.28 + random.nextDouble() * 0.56;
+        final yFactor = -0.24 + random.nextDouble() * 0.5;
+        final xStretch = 0.72 + random.nextDouble() * 0.58;
+        _addCheeseHole(
+          block,
+          details,
+          material: material,
+          position: vm.Vector3(
+            xFactor * width,
+            yFactor * height,
+            -depth / 2 + radius * 0.22 - 0.01,
+          ),
+          scale: vm.Vector3(radius * xStretch, radius * 0.88, radius * 0.22),
+        );
+      }
+    }
+    _surfaceDetails[block] = details;
+  }
+
+  void _addCheeseHole(
+    Node block,
+    List<Node> details, {
+    required PhysicallyBasedMaterial material,
+    required vm.Vector3 position,
+    required vm.Vector3 scale,
+  }) {
+    final hole = Node(mesh: Mesh(_cheeseHoleGeometry, material))
+      ..position = position
+      ..scale = scale
+      // As cavidades usam a própria iluminação da cena, mas não precisam
+      // atualizar o shadow map para parecerem profundas.
+      ..castsShadows = false;
+    block.add(hole);
+    details.add(hole);
+  }
+
+  PhysicallyBasedMaterial _createCheeseHoleMaterial(int colorIndex) {
+    final color = _linearBlockColor(colorIndex);
+    return PhysicallyBasedMaterial()
+      ..baseColorFactor = vm.Vector4(
+        color.x * 0.48,
+        color.y * 0.38,
+        color.z * 0.12,
+        1.0,
+      )
+      ..metallicFactor = 0.0
+      ..roughnessFactor = 0.94;
   }
 
   void _addTowerCollider(
@@ -518,6 +678,13 @@ class _BlockySceneState extends State<BlockyScene> {
     topFaceShade.mesh = Mesh(
       _createTopFaceShadeGeometry(width, depth),
       _createTopFaceShadeMaterial(colorIndex),
+    );
+    _updateBlockSurfaceDetails(
+      block,
+      width: width,
+      depth: depth,
+      height: GameConfig.blockHeight,
+      colorIndex: colorIndex,
     );
   }
 
@@ -780,6 +947,8 @@ class _BlockySceneState extends State<BlockyScene> {
 
       _scene.remove(piece.node);
       _topFaceShades.remove(piece.node);
+      _surfaceDetails.remove(piece.node);
+      _surfaceDetailSeeds.remove(piece.node);
       removedPiece = true;
       return true;
     });
@@ -1064,6 +1233,7 @@ class _BlockySceneState extends State<BlockyScene> {
     return switch (impact.motion) {
       BlockImpactMotion.standard => _standardImpactScale(impact, progress),
       BlockImpactMotion.squashAndStretch => _jellyImpactScale(impact, progress),
+      BlockImpactMotion.firmSettle => _firmSettleImpactScale(impact, progress),
     };
   }
 
@@ -1091,6 +1261,30 @@ class _BlockySceneState extends State<BlockyScene> {
     final reboundProgress = ((progress - squashPortion) / (1 - squashPortion))
         .clamp(0.0, 1.0)
         .toDouble();
+    final intensity = math.sin(math.pi * reboundProgress);
+    return vm.Vector3(
+      1.0 - impact.reboundHorizontalScale * intensity,
+      1.0 + impact.reboundVerticalScale * intensity,
+      1.0 - impact.reboundHorizontalScale * intensity,
+    );
+  }
+
+  vm.Vector3 _firmSettleImpactScale(BlockImpactVisual impact, double progress) {
+    const compressionPortion = 0.6;
+    if (progress < compressionPortion) {
+      final compressionProgress = progress / compressionPortion;
+      final intensity = math.sin(math.pi / 2 * compressionProgress);
+      return vm.Vector3(
+        1.0 + impact.horizontalScale * intensity,
+        1.0 - impact.verticalScale * intensity,
+        1.0 + impact.horizontalScale * intensity,
+      );
+    }
+
+    final reboundProgress =
+        ((progress - compressionPortion) / (1.0 - compressionPortion))
+            .clamp(0.0, 1.0)
+            .toDouble();
     final intensity = math.sin(math.pi * reboundProgress);
     return vm.Vector3(
       1.0 - impact.reboundHorizontalScale * intensity,

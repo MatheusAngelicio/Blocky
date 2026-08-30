@@ -309,6 +309,7 @@ String _themeName(BlockTheme theme) => switch (theme) {
   BlockTheme.classic => 'Classic',
   BlockTheme.jelly => 'Jelly',
   BlockTheme.chocolate => 'Chocolate',
+  BlockTheme.cheese => 'Cheese',
 };
 
 Color _lighten(Color color, double amount) {

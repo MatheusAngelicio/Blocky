@@ -8,6 +8,7 @@ import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_config.dart';
 import 'package:blocky/game/game_sound.dart';
 import 'package:blocky/scene/block_theme_visual.dart';
+import 'package:blocky/scene/block_theme_scene_renderer.dart';
 import 'package:blocky/scene/scene_effect_models.dart';
 import 'package:blocky/scene/scene_background_stars.dart';
 import 'package:blocky/scene/scene_game_over_camera_reveal.dart';
@@ -47,6 +48,7 @@ class _BlockySceneState extends State<BlockyScene> {
 
   final Scene _scene = Scene();
   late final BlockThemeVisual _blockThemeVisual;
+  late final BlockThemeSceneRenderer _themeSceneRenderer;
   late final GradientSkySource _skySource;
   late SkyProgressionVariation _skyVariation;
   PhysicsWorld? _physicsWorld;
@@ -89,16 +91,6 @@ class _BlockySceneState extends State<BlockyScene> {
   final List<ScenePerfectLightPulse> _perfectLightPulses = [];
   final List<ScenePerfectWobble> _perfectWobbles = [];
   final Map<Node, Node> _topFaceShades = {};
-  final Map<Node, List<Node>> _surfaceDetails = {};
-  final Map<Node, int> _surfaceDetailSeeds = {};
-  late final SphereGeometry _cheeseHoleGeometry = SphereGeometry(
-    radius: 1.0,
-    segments: 12,
-    rings: 8,
-  );
-  late final CuboidGeometry _surfaceDetailUnitCube = CuboidGeometry(
-    vm.Vector3.all(1.0),
-  );
   Node? _impactBlock;
   double _impactElapsedSeconds = 0.0;
   Node? _recoveryBlock;
@@ -110,6 +102,11 @@ class _BlockySceneState extends State<BlockyScene> {
   void initState() {
     super.initState();
     _blockThemeVisual = BlockThemeVisual.forTheme(widget.blockTheme);
+    _themeSceneRenderer = BlockThemeSceneRenderer(
+      visual: _blockThemeVisual,
+      colorForIndex: _linearBlockColor,
+      random: _random,
+    );
     _backgroundStars = SceneBackgroundStars(scene: _scene, random: _random);
     widget.gameController.addListener(_onGameStateChanged);
     _initializeScene();
@@ -203,8 +200,7 @@ class _BlockySceneState extends State<BlockyScene> {
     _perfectLightPulses.clear();
     _perfectWobbles.clear();
     _topFaceShades.clear();
-    _surfaceDetails.clear();
-    _surfaceDetailSeeds.clear();
+    _themeSceneRenderer.clear();
     _impactBlock = null;
     _impactElapsedSeconds = 0.0;
     _recoveryBlock = null;
@@ -358,7 +354,6 @@ class _BlockySceneState extends State<BlockyScene> {
           ..castsShadows = false;
     block.add(topFaceShade);
     _topFaceShades[block] = topFaceShade;
-    _surfaceDetailSeeds[block] = _random.nextInt(0x7fffffff);
     _updateBlockSurfaceDetails(
       block,
       width: width,
@@ -376,547 +371,13 @@ class _BlockySceneState extends State<BlockyScene> {
     required double height,
     required int colorIndex,
   }) {
-    final existingDetails = _surfaceDetails.remove(block);
-    if (existingDetails != null) {
-      for (final detail in existingDetails) {
-        block.remove(detail);
-      }
-    }
-
-    switch (_blockThemeVisual.surfaceDetail) {
-      case BlockSurfaceDetail.none:
-        return;
-      case BlockSurfaceDetail.classicTopSheen:
-        _addClassicTopSheen(
-          block,
-          width: width,
-          depth: depth,
-          height: height,
-          colorIndex: colorIndex,
-        );
-      case BlockSurfaceDetail.jellyTopHighlight:
-        _addJellyTopHighlight(
-          block,
-          width: width,
-          depth: depth,
-          height: height,
-          colorIndex: colorIndex,
-        );
-      case BlockSurfaceDetail.cheeseHoles:
-        _addCheeseHoleDetails(
-          block,
-          width: width,
-          depth: depth,
-          height: height,
-          colorIndex: colorIndex,
-        );
-      case BlockSurfaceDetail.chocolateSegments:
-        _addChocolateSegmentDetails(
-          block,
-          width: width,
-          depth: depth,
-          height: height,
-          colorIndex: colorIndex,
-        );
-    }
-  }
-
-  void _addCheeseHoleDetails(
-    Node block, {
-    required double width,
-    required double depth,
-    required double height,
-    required int colorIndex,
-  }) {
-    final baseRadius = math.min(0.22, math.min(width, depth) * 0.12);
-    if (baseRadius < 0.045) return;
-
-    // Cada bloco recebe sua própria semente, mas ela é reutilizada quando a
-    // geometria é recalculada após o corte. O padrão fica variado e estável.
-    final seed = _surfaceDetailSeeds[block] ??= _random.nextInt(0x7fffffff);
-    final random = math.Random(seed);
-    final maximumTopHoleCount = width * depth < 0.85
-        ? 1
-        : width < 1.1 || depth < 1.1
-        ? 2
-        : 6;
-    final topHoleCount = maximumTopHoleCount < 3
-        ? maximumTopHoleCount
-        : maximumTopHoleCount - 1 + random.nextInt(2);
-    final material = _createCheeseHoleMaterial(colorIndex);
-    final details = <Node>[];
-    for (var index = 0; index < topHoleCount; index++) {
-      final radius = baseRadius * (0.42 + random.nextDouble() * 0.72);
-      final xFactor = -0.34 + random.nextDouble() * 0.68;
-      final zFactor = -0.3 + random.nextDouble() * 0.62;
-      final xStretch = 0.7 + random.nextDouble() * 0.64;
-      final zStretch = 0.7 + random.nextDouble() * 0.64;
-      _addCheeseHole(
-        block,
-        details,
-        material: material,
-        position: vm.Vector3(
-          xFactor * width,
-          height / 2 - radius * 0.22 + 0.016,
-          zFactor * depth,
-        ),
-        scale: vm.Vector3(radius * xStretch, radius * 0.22, radius * zStretch),
-      );
-    }
-
-    final sideHoleCount = topHoleCount > 2 ? 1 + random.nextInt(2) : 1;
-    if (depth >= 0.65) {
-      for (var index = 0; index < sideHoleCount; index++) {
-        final radius = baseRadius * (0.45 + random.nextDouble() * 0.48);
-        final yFactor = -0.24 + random.nextDouble() * 0.5;
-        final zFactor = -0.26 + random.nextDouble() * 0.52;
-        final zStretch = 0.72 + random.nextDouble() * 0.58;
-        _addCheeseHole(
-          block,
-          details,
-          material: material,
-          position: vm.Vector3(
-            -width / 2 + radius * 0.22 - 0.01,
-            yFactor * height,
-            zFactor * depth,
-          ),
-          scale: vm.Vector3(radius * 0.22, radius * 0.88, radius * zStretch),
-        );
-      }
-    }
-    if (width >= 0.65) {
-      for (var index = 0; index < sideHoleCount; index++) {
-        final radius = baseRadius * (0.45 + random.nextDouble() * 0.48);
-        final xFactor = -0.28 + random.nextDouble() * 0.56;
-        final yFactor = -0.24 + random.nextDouble() * 0.5;
-        final xStretch = 0.72 + random.nextDouble() * 0.58;
-        _addCheeseHole(
-          block,
-          details,
-          material: material,
-          position: vm.Vector3(
-            xFactor * width,
-            yFactor * height,
-            -depth / 2 + radius * 0.22 - 0.01,
-          ),
-          scale: vm.Vector3(radius * xStretch, radius * 0.88, radius * 0.22),
-        );
-      }
-    }
-    _surfaceDetails[block] = details;
-  }
-
-  void _addCheeseHole(
-    Node block,
-    List<Node> details, {
-    required PhysicallyBasedMaterial material,
-    required vm.Vector3 position,
-    required vm.Vector3 scale,
-  }) {
-    final hole = Node(mesh: Mesh(_cheeseHoleGeometry, material))
-      ..position = position
-      ..scale = scale
-      // As cavidades usam a própria iluminação da cena, mas não precisam
-      // atualizar o shadow map para parecerem profundas.
-      ..castsShadows = false;
-    block.add(hole);
-    details.add(hole);
-  }
-
-  PhysicallyBasedMaterial _createCheeseHoleMaterial(int colorIndex) {
-    final color = _linearBlockColor(colorIndex);
-    return PhysicallyBasedMaterial()
-      ..baseColorFactor = vm.Vector4(
-        color.x * 0.48,
-        color.y * 0.38,
-        color.z * 0.12,
-        1.0,
-      )
-      ..metallicFactor = 0.0
-      ..roughnessFactor = 0.94;
-  }
-
-  void _addClassicTopSheen(
-    Node block, {
-    required double width,
-    required double depth,
-    required double height,
-    required int colorIndex,
-  }) {
-    // O mesmo reflexo diagonal da miniatura da Home, mas em uma única malha
-    // plana sobre o topo. Ele não altera a caixa lógica do bloco.
-    final details = <Node>[];
-    _addPreviewSideFaces(
-      block,
-      details,
+    _themeSceneRenderer.updateDetails(
+      block: block,
       width: width,
       depth: depth,
       height: height,
       colorIndex: colorIndex,
     );
-    final sheen = Node(
-      mesh: Mesh(
-        _createClassicTopSheenGeometry(
-          width: width,
-          depth: depth,
-          height: height,
-        ),
-        _createClassicTopSheenMaterial(colorIndex),
-      ),
-    )..castsShadows = false;
-    block.add(sheen);
-    details.add(sheen);
-    _surfaceDetails[block] = details;
-  }
-
-  MeshGeometry _createClassicTopSheenGeometry({
-    required double width,
-    required double depth,
-    required double height,
-  }) {
-    final topY = height / 2 + 0.007;
-    return MeshGeometry.fromArrays(
-      positions: Float32List.fromList([
-        // Retângulo largo e translúcido. Pela câmera isométrica ele assume
-        // exatamente a forma de paralelogramo do preview da Home.
-        -width * 0.42,
-        topY,
-        -depth * 0.2,
-        width * 0.06,
-        topY,
-        -depth * 0.2,
-        width * 0.06,
-        topY,
-        depth * 0.08,
-        -width * 0.42,
-        topY,
-        depth * 0.08,
-      ]),
-      normals: Float32List.fromList([
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-      ]),
-      indices: [0, 1, 2, 0, 2, 3],
-    );
-  }
-
-  UnlitMaterial _createClassicTopSheenMaterial(int colorIndex) {
-    // O passe translúcido da Scene pode ser ocultado pela camada de sombra do
-    // topo. Pré-mesclar a cor reproduz a transparência visual em uma malha
-    // opaca, que permanece nítida em qualquer ordem de renderização.
-    const whiteMix = 0.34;
-    final color = _linearBlockColor(colorIndex);
-    return UnlitMaterial()
-      ..baseColorFactor = vm.Vector4(
-        color.x * (1 - whiteMix) + whiteMix,
-        color.y * (1 - whiteMix) + whiteMix,
-        color.z * (1 - whiteMix) + whiteMix,
-        1.0,
-      );
-  }
-
-  void _addJellyTopHighlight(
-    Node block, {
-    required double width,
-    required double depth,
-    required double height,
-    required int colorIndex,
-  }) {
-    // O risco claro fica próximo da borda frontal da face superior. É um
-    // detalhe visual independente da caixa lógica e acompanha cortes/restart.
-    final details = <Node>[];
-    _addPreviewSideFaces(
-      block,
-      details,
-      width: width,
-      depth: depth,
-      height: height,
-      colorIndex: colorIndex,
-    );
-    final highlight =
-        Node(
-            mesh: Mesh(
-              _surfaceDetailUnitCube,
-              _createJellyTopHighlightMaterial(),
-            ),
-          )
-          ..position = vm.Vector3(
-            // O highlight acompanha a lateral esquerda da face superior, e
-            // não a borda frontal do bloco.
-            -width / 2 + width * 0.055,
-            height / 2 + 0.007,
-            // Puxa o detalhe para a ponta frontal da lateral, deixando-o
-            // visualmente mais baixo no enquadramento isométrico.
-            -depth * 0.16,
-          )
-          ..scale = vm.Vector3(
-            math.max(0.008, width * 0.009),
-            0.005,
-            // Não alcança a ponta inferior da lateral: fica uma margem que
-            // evita a aparência de um contorno colado na borda.
-            depth * 0.5,
-          )
-          ..castsShadows = false;
-    block.add(highlight);
-    details.add(highlight);
-    _surfaceDetails[block] = details;
-  }
-
-  void _addPreviewSideFaces(
-    Node block,
-    List<Node> details, {
-    required double width,
-    required double depth,
-    required double height,
-    required int colorIndex,
-  }) {
-    // A câmera enxerga as faces -X (à esquerda) e -Z (à direita). Mantê-las
-    // sem luz dinâmica reproduz o contraste deliberado do preview da Home:
-    // esquerda clara e direita escura, em qualquer cor do tema.
-    final leftFace = Node(
-      mesh: Mesh(
-        _createPreviewSideGeometry(
-          width: width,
-          depth: depth,
-          height: height,
-          leftSide: true,
-        ),
-        _createPreviewSideMaterial(colorIndex, brightness: 1.0),
-      ),
-    )..castsShadows = false;
-    final rightFace = Node(
-      mesh: Mesh(
-        _createPreviewSideGeometry(
-          width: width,
-          depth: depth,
-          height: height,
-          leftSide: false,
-        ),
-        _createPreviewSideMaterial(colorIndex, brightness: 0.75),
-      ),
-    )..castsShadows = false;
-    block
-      ..add(leftFace)
-      ..add(rightFace);
-    details
-      ..add(leftFace)
-      ..add(rightFace);
-  }
-
-  MeshGeometry _createPreviewSideGeometry({
-    required double width,
-    required double depth,
-    required double height,
-    required bool leftSide,
-  }) {
-    const faceOffset = 0.005;
-    final halfWidth = width / 2;
-    final halfDepth = depth / 2;
-    final halfHeight = height / 2;
-    if (leftSide) {
-      return MeshGeometry.fromArrays(
-        positions: Float32List.fromList([
-          -halfWidth - faceOffset,
-          -halfHeight,
-          halfDepth,
-          -halfWidth - faceOffset,
-          -halfHeight,
-          -halfDepth,
-          -halfWidth - faceOffset,
-          halfHeight,
-          halfDepth,
-          -halfWidth - faceOffset,
-          halfHeight,
-          -halfDepth,
-        ]),
-        normals: Float32List.fromList([
-          -1.0,
-          0.0,
-          0.0,
-          -1.0,
-          0.0,
-          0.0,
-          -1.0,
-          0.0,
-          0.0,
-          -1.0,
-          0.0,
-          0.0,
-        ]),
-        indices: [0, 2, 1, 1, 2, 3],
-      );
-    }
-
-    return MeshGeometry.fromArrays(
-      positions: Float32List.fromList([
-        -halfWidth,
-        -halfHeight,
-        -halfDepth - faceOffset,
-        halfWidth,
-        -halfHeight,
-        -halfDepth - faceOffset,
-        -halfWidth,
-        halfHeight,
-        -halfDepth - faceOffset,
-        halfWidth,
-        halfHeight,
-        -halfDepth - faceOffset,
-      ]),
-      normals: Float32List.fromList([
-        0.0,
-        0.0,
-        -1.0,
-        0.0,
-        0.0,
-        -1.0,
-        0.0,
-        0.0,
-        -1.0,
-        0.0,
-        0.0,
-        -1.0,
-      ]),
-      indices: [0, 2, 1, 1, 2, 3],
-    );
-  }
-
-  UnlitMaterial _createPreviewSideMaterial(
-    int colorIndex, {
-    required double brightness,
-  }) {
-    final color = _linearBlockColor(colorIndex);
-    return UnlitMaterial()
-      ..baseColorFactor = vm.Vector4(
-        color.x * brightness,
-        color.y * brightness,
-        color.z * brightness,
-        1.0,
-      );
-  }
-
-  PhysicallyBasedMaterial _createJellyTopHighlightMaterial() {
-    return PhysicallyBasedMaterial()
-      ..baseColorFactor = vm.Vector4(1.0, 1.0, 0.99, 0.28)
-      ..emissiveFactor = vm.Vector4(1.0, 1.0, 0.97, 1.0)
-      ..emissiveStrength = 0.04
-      ..metallicFactor = 0.0
-      ..roughnessFactor = 0.48
-      ..alphaMode = AlphaMode.blend;
-  }
-
-  void _addChocolateSegmentDetails(
-    Node block, {
-    required double width,
-    required double depth,
-    required double height,
-    required int colorIndex,
-  }) {
-    const grooveThickness = 0.035;
-    const grooveHeight = 0.016;
-    const sideGrooveDepth = 0.014;
-    const inset = 0.07;
-    final columns = width >= 2.6
-        ? 4
-        : width >= 1.45
-        ? 3
-        : width >= 0.5
-        ? 2
-        : 1;
-    final rows = depth >= 2.6
-        ? 4
-        : depth >= 1.45
-        ? 3
-        : depth >= 0.5
-        ? 2
-        : 1;
-    final material = _createChocolateGrooveMaterial(colorIndex);
-    final details = <Node>[];
-
-    for (var column = 1; column < columns; column++) {
-      final x = -width / 2 + width * column / columns;
-      _addSurfaceDetail(
-        block,
-        details,
-        material: material,
-        position: vm.Vector3(x, height / 2 + grooveHeight / 2 + 0.004, 0.0),
-        scale: vm.Vector3(
-          grooveThickness,
-          grooveHeight,
-          math.max(0.01, depth - inset * 2),
-        ),
-      );
-      // Sulco correspondente na face voltada para a câmera.
-      _addSurfaceDetail(
-        block,
-        details,
-        material: material,
-        position: vm.Vector3(x, 0.0, -depth / 2 - sideGrooveDepth / 2),
-        scale: vm.Vector3(grooveThickness, height * 0.9, sideGrooveDepth),
-      );
-    }
-
-    for (var row = 1; row < rows; row++) {
-      final z = -depth / 2 + depth * row / rows;
-      _addSurfaceDetail(
-        block,
-        details,
-        material: material,
-        position: vm.Vector3(0.0, height / 2 + grooveHeight / 2 + 0.004, z),
-        scale: vm.Vector3(
-          math.max(0.01, width - inset * 2),
-          grooveHeight,
-          grooveThickness,
-        ),
-      );
-      _addSurfaceDetail(
-        block,
-        details,
-        material: material,
-        position: vm.Vector3(-width / 2 - sideGrooveDepth / 2, 0.0, z),
-        scale: vm.Vector3(sideGrooveDepth, height * 0.9, grooveThickness),
-      );
-    }
-    _surfaceDetails[block] = details;
-  }
-
-  PhysicallyBasedMaterial _createChocolateGrooveMaterial(int colorIndex) {
-    final color = _linearBlockColor(colorIndex);
-    return PhysicallyBasedMaterial()
-      ..baseColorFactor = vm.Vector4(
-        color.x * 0.62,
-        color.y * 0.48,
-        color.z * 0.33,
-        1.0,
-      )
-      ..metallicFactor = 0.0
-      ..roughnessFactor = 0.6;
-  }
-
-  void _addSurfaceDetail(
-    Node block,
-    List<Node> details, {
-    required PhysicallyBasedMaterial material,
-    required vm.Vector3 position,
-    required vm.Vector3 scale,
-  }) {
-    final detail = Node(mesh: Mesh(_surfaceDetailUnitCube, material))
-      ..position = position
-      ..scale = scale
-      // Um relevo muito baixo, mas que ainda projeta uma sombra de contato,
-      // faz os traços parecerem ranhuras do tablete sem escurecer o material.
-      ..castsShadows = true;
-    block.add(detail);
-    details.add(detail);
   }
 
   void _addTowerCollider(
@@ -1292,8 +753,7 @@ class _BlockySceneState extends State<BlockyScene> {
 
       _scene.remove(piece.node);
       _topFaceShades.remove(piece.node);
-      _surfaceDetails.remove(piece.node);
-      _surfaceDetailSeeds.remove(piece.node);
+      _themeSceneRenderer.forget(piece.node);
       removedPiece = true;
       return true;
     });

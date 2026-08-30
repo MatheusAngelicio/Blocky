@@ -1,4 +1,5 @@
 import 'package:blocky/app/blocky_colors.dart';
+import 'package:blocky/app/blocky_arcade.dart';
 import 'package:blocky/ui/home_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -13,7 +14,7 @@ class BlockyApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        fontFamily: 'monospace',
+        fontFamily: BlockyTypography.fontFamily,
         colorScheme: const ColorScheme.dark(
           primary: BlockyColors.primary,
           secondary: BlockyColors.secondary,
@@ -23,11 +24,7 @@ class BlockyApp extends StatelessWidget {
           style: FilledButton.styleFrom(
             shape: const RoundedRectangleBorder(),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            textStyle: const TextStyle(
-              fontFamily: 'monospace',
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.2,
-            ),
+            textStyle: BlockyTypography.button,
           ),
         ),
       ),

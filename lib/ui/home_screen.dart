@@ -1,9 +1,9 @@
+import 'package:blocky/app/blocky_arcade.dart';
 import 'package:blocky/app/blocky_colors.dart';
 import 'package:blocky/game/best_score_storage.dart';
 import 'package:blocky/game/blocky_coin_storage.dart';
 import 'package:blocky/game/block_theme.dart';
 import 'package:blocky/game/block_theme_storage.dart';
-import 'package:blocky/scene/sky_progression.dart';
 import 'package:blocky/ui/game_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -82,176 +82,94 @@ class _HomeScreenState extends State<HomeScreen> {
     final themeColor = BlockyColors.themeAccent(_selectedTheme);
 
     return Scaffold(
-      backgroundColor: SkyProgression.homeBackgroundColor,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-              child: Column(
-                children: [
-                  const Text(
-                    'BLOCKY',
-                    style: TextStyle(
-                      color: BlockyColors.primary,
-                      fontSize: 44,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 4,
-                      shadows: [
-                        Shadow(
-                          color: BlockyColors.titleShadow,
-                          offset: Offset(3, 4),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'STACK IT UP',
-                    style: TextStyle(
-                      color: BlockyColors.frame,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                  const SizedBox(height: 26),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ArcadeStat(
-                          label: 'BLOCKY COINS',
-                          value: '$_blockyCoins',
-                        ),
+      backgroundColor: BlockyColors.homeBackground,
+      body: ArcadeBackdrop(
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                child: Column(
+                  children: [
+                    const Text('BLOCKY', style: BlockyTypography.logo),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'STACK IT UP',
+                      style: TextStyle(
+                        color: BlockyColors.softText,
+                        fontFamily: BlockyTypography.fontFamily,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 2,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _ArcadeStat(label: 'BEST', value: '$_bestScore'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                    decoration: BoxDecoration(
-                      color: BlockyColors.panelSurface,
-                      border: Border.all(color: themeColor, width: 3),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: BlockyColors.shadow,
-                          offset: Offset(5, 6),
-                        ),
-                      ],
                     ),
-                    child: Column(
+                    const SizedBox(height: 26),
+                    Row(
                       children: [
-                        Text(
-                          '${_themeName(_selectedTheme).toUpperCase()} BLOCKS',
-                          style: TextStyle(
-                            color: themeColor,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.5,
+                        Expanded(
+                          child: ArcadeStat(
+                            label: 'BLOCKY COINS',
+                            value: '$_blockyCoins',
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        SizedBox(
-                          height: 190,
-                          child: CustomPaint(
-                            painter: _ThemeTowerPainter(_selectedTheme),
-                            child: const SizedBox.expand(),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ArcadeStat(
+                            label: 'BEST',
+                            value: '$_bestScore',
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 28),
-                  _ArcadeButton(
-                    label: 'PLAY',
-                    color: themeColor,
-                    onPressed: _startGame,
-                  ),
-                  const SizedBox(height: 14),
-                  _ArcadeButton(
-                    label: 'BLOCK THEME',
-                    color: BlockyColors.secondaryBorder,
-                    onPressed: _showThemeSelector,
-                  ),
-                ],
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ArcadePanel(
+                        accent: themeColor,
+                        borderWidth: 3,
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                        shadowOffset: const Offset(5, 6),
+                        child: Column(
+                          children: [
+                            Text(
+                              '${_themeName(_selectedTheme).toUpperCase()} BLOCKS',
+                              style: BlockyTypography.label.copyWith(
+                                color: themeColor,
+                                fontSize: 14,
+                                letterSpacing: 1.5,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            SizedBox(
+                              height: 190,
+                              child: CustomPaint(
+                                painter: _ThemeTowerPainter(_selectedTheme),
+                                child: const SizedBox.expand(),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    ArcadeButton(
+                      label: 'PLAY',
+                      color: themeColor,
+                      onPressed: _startGame,
+                    ),
+                    const SizedBox(height: 14),
+                    ArcadeButton(
+                      label: 'BLOCK THEME',
+                      color: BlockyColors.secondaryBorder,
+                      onPressed: _showThemeSelector,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _ArcadeStat extends StatelessWidget {
-  const _ArcadeStat({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: BlockyColors.panelSurface,
-        border: Border.all(color: BlockyColors.panelBorder, width: 2),
-      ),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: BlockyColors.muted,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.4,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            value,
-            style: const TextStyle(
-              color: BlockyColors.white,
-              fontSize: 25,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ArcadeButton extends StatelessWidget {
-  const _ArcadeButton({
-    required this.label,
-    required this.color,
-    required this.onPressed,
-  });
-
-  final String label;
-  final Color color;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: FilledButton(
-        style: FilledButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: BlockyColors.frame,
-          side: const BorderSide(color: BlockyColors.frame, width: 2),
-        ),
-        onPressed: onPressed,
-        child: Text(label),
       ),
     );
   }
@@ -274,12 +192,7 @@ class _ThemeSelector extends StatelessWidget {
             const Text(
               'CHOOSE BLOCK THEME',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: BlockyColors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.3,
-              ),
+              style: BlockyTypography.heading,
             ),
             const SizedBox(height: 20),
             for (final theme in BlockTheme.values) ...[
@@ -327,21 +240,15 @@ class _ThemeOption extends StatelessWidget {
               Expanded(
                 child: Text(
                   _themeName(theme).toUpperCase(),
-                  style: const TextStyle(
+                  style: BlockyTypography.button.copyWith(
                     color: BlockyColors.white,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.1,
                   ),
                 ),
               ),
               if (selected)
-                const Text(
+                Text(
                   'SELECTED',
-                  style: TextStyle(
-                    color: BlockyColors.muted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: BlockyTypography.label.copyWith(fontSize: 10),
                 ),
             ],
           ),

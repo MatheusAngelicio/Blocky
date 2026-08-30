@@ -1,14 +1,10 @@
 import 'dart:math' as math;
 
-import 'package:blocky/app/blocky_colors.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
 /// Paleta contínua que comunica a altura da torre sem criar cenários extras.
 abstract final class SkyProgression {
-  /// A Home usa a mesma base do primeiro céu para uma transição acolhedora.
-  static const homeBackgroundColor = BlockyColors.initialSky;
-
   static const _scoreToReachNight = 80;
 
   static final _variations = <SkyProgressionVariation>[

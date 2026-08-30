@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 /// Paleta compartilhada dos widgets Flutter do Blocky.
 abstract final class BlockyColors {
   static const initialSky = Color(0xFF70C88B);
+  static const homeBackgroundTop = Color(0xFF3C2A63);
+  static const homeBackground = Color(0xFF171323);
   static const primary = Color(0xFFFFD65C);
   static const secondary = Color(0xFF7CE5A2);
   static const panelSurface = Color(0xFF282341);
@@ -23,6 +25,7 @@ abstract final class BlockyColors {
   static const scorePanel = Color(0xE8282341);
   static const gameOverOverlay = Color(0xD6151225);
   static const translucentShadow = Color(0x99080611);
+  static const disabledButton = Color(0xFF615C72);
 
   static const classicAccent = Color(0xFFFFD65C);
   static const jellyAccent = Color(0xFF8EE8C5);

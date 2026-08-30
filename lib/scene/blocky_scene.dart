@@ -8,6 +8,9 @@ import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_config.dart';
 import 'package:blocky/game/game_sound.dart';
 import 'package:blocky/scene/block_theme_visual.dart';
+import 'package:blocky/scene/scene_effect_models.dart';
+import 'package:blocky/scene/scene_background_stars.dart';
+import 'package:blocky/scene/scene_game_over_camera_reveal.dart';
 import 'package:blocky/scene/sky_progression.dart';
 import 'package:flutter/widgets.dart' hide BoxShape;
 import 'package:flutter_scene/physics.dart';
@@ -66,12 +69,8 @@ class _BlockySceneState extends State<BlockyScene> {
   bool _isReady = false;
   bool _hasResolvedPlacement = false;
   Size _viewportSize = Size.zero;
-  bool _isRevealingGameOver = false;
-  double _gameOverRevealElapsedSeconds = 0.0;
-  late vm.Vector3 _gameOverRevealStartPosition;
-  late vm.Vector3 _gameOverRevealStartTarget;
-  late vm.Vector3 _gameOverRevealEndPosition;
-  late vm.Vector3 _gameOverRevealEndTarget;
+  final SceneGameOverCameraReveal _gameOverCameraReveal =
+      SceneGameOverCameraReveal();
   double _movingDirection = 1.0;
   double _towerCenterX = 0.0;
   double _towerCenterZ = 0.0;
@@ -84,11 +83,11 @@ class _BlockySceneState extends State<BlockyScene> {
   int _nextBlockColorIndex = 0;
   late int _movingBlockColorIndex;
   int _sceneRound = -1;
-  final List<_FallingPiece> _fallingPieces = [];
-  final List<_BackgroundStar> _backgroundStars = [];
-  final List<_TransientParticleEffect> _transientParticleEffects = [];
-  final List<_PerfectLightPulse> _perfectLightPulses = [];
-  final List<_PerfectWobble> _perfectWobbles = [];
+  final List<SceneFallingPiece> _fallingPieces = [];
+  late final SceneBackgroundStars _backgroundStars;
+  final List<SceneTransientParticleEffect> _transientParticleEffects = [];
+  final List<ScenePerfectLightPulse> _perfectLightPulses = [];
+  final List<ScenePerfectWobble> _perfectWobbles = [];
   final Map<Node, Node> _topFaceShades = {};
   final Map<Node, List<Node>> _surfaceDetails = {};
   final Map<Node, int> _surfaceDetailSeeds = {};
@@ -111,6 +110,7 @@ class _BlockySceneState extends State<BlockyScene> {
   void initState() {
     super.initState();
     _blockThemeVisual = BlockThemeVisual.forTheme(widget.blockTheme);
+    _backgroundStars = SceneBackgroundStars(scene: _scene, random: _random);
     widget.gameController.addListener(_onGameStateChanged);
     _initializeScene();
   }
@@ -212,8 +212,7 @@ class _BlockySceneState extends State<BlockyScene> {
     _recoveryElapsedSeconds = 0.0;
     _sceneRound = widget.gameController.round;
     _hasResolvedPlacement = false;
-    _isRevealingGameOver = false;
-    _gameOverRevealElapsedSeconds = 0.0;
+    _gameOverCameraReveal.reset();
     _movingDirection = 1.0;
     _towerCenterX = 0.0;
     _towerCenterZ = 0.0;
@@ -230,7 +229,7 @@ class _BlockySceneState extends State<BlockyScene> {
       widget.gameController.score,
       variation: _skyVariation,
     );
-    _createBackgroundStars();
+    _backgroundStars.create();
 
     final baseBlockColorIndex = _nextBlockColorIndex++;
     final foundationTopY = -GameConfig.blockHeight / 2;
@@ -310,76 +309,12 @@ class _BlockySceneState extends State<BlockyScene> {
     _camera.target = vm.Vector3(0.0, _initialCameraTargetY, 0.0);
   }
 
-  void _createBackgroundStars() {
-    for (var index = 0; index < GameConfig.backgroundStarCount; index++) {
-      final size =
-          GameConfig.backgroundStarMinimumSize +
-          _random.nextDouble() *
-              (GameConfig.backgroundStarMaximumSize -
-                  GameConfig.backgroundStarMinimumSize);
-      final material = _createBackgroundStarMaterial();
-      final star = Node(
-        mesh: Mesh(CuboidGeometry(vm.Vector3.all(size)), material),
-      )..castsShadows = false;
-      final backgroundStar = _BackgroundStar(
-        node: star,
-        material: material,
-        horizontalOffset:
-            (_random.nextDouble() - 0.5) * GameConfig.backgroundStarFieldWidth,
-        verticalOffset:
-            (_random.nextDouble() - 0.5) * GameConfig.backgroundStarFieldHeight,
-        depth: GameConfig.backgroundStarFieldDepth + _random.nextDouble() * 0.6,
-        blinkSpeed: 0.8 + _random.nextDouble() * 1.4,
-        blinkPhase: _random.nextDouble() * math.pi * 2,
-      );
-      _backgroundStars.add(backgroundStar);
-      _scene.add(star);
-    }
-  }
-
-  PhysicallyBasedMaterial _createBackgroundStarMaterial() {
-    return PhysicallyBasedMaterial()
-      ..baseColorFactor = vm.Vector4(1.0, 0.96, 0.82, 0.0)
-      ..emissiveFactor = vm.Vector4(1.0, 0.96, 0.82, 1.0)
-      ..emissiveStrength = 1.0
-      ..metallicFactor = 0.0
-      ..roughnessFactor = 1.0
-      ..alphaMode = AlphaMode.blend;
-  }
-
   void _updateBackgroundStars(double deltaSeconds) {
-    if (_backgroundStars.isEmpty) return;
-
-    final nightProgress = (widget.gameController.score / 80)
-        .clamp(0.0, 1.0)
-        .toDouble();
-    final maximumOpacity =
-        GameConfig.backgroundStarDayOpacity +
-        (GameConfig.backgroundStarNightOpacity -
-                GameConfig.backgroundStarDayOpacity) *
-            nightProgress;
-    for (final star in _backgroundStars) {
-      star.elapsedSeconds += deltaSeconds;
-      final blink = math
-          .pow(
-            (math.sin(star.elapsedSeconds * star.blinkSpeed + star.blinkPhase) +
-                    1.0) /
-                2.0,
-            3.0,
-          )
-          .toDouble();
-      final opacity = maximumOpacity * blink;
-      final scale = 0.7 + blink * 0.55;
-
-      star.node.position = vm.Vector3(
-        star.horizontalOffset,
-        _camera.target.y + star.verticalOffset,
-        star.depth,
-      );
-      star.node.scale = vm.Vector3.all(scale);
-      star.material.baseColorFactor = vm.Vector4(1.0, 0.96, 0.82, opacity);
-      star.material.emissiveStrength = 0.55 + blink * 1.25;
-    }
+    _backgroundStars.update(
+      deltaSeconds: deltaSeconds,
+      score: widget.gameController.score,
+      cameraTargetY: _camera.target.y,
+    );
   }
 
   MeshGeometry _createBlockGeometry(
@@ -626,7 +561,7 @@ class _BlockySceneState extends State<BlockyScene> {
           depth: depth,
           height: height,
         ),
-        _createClassicTopSheenMaterial(),
+        _createClassicTopSheenMaterial(colorIndex),
       ),
     )..castsShadows = false;
     block.add(sheen);
@@ -642,18 +577,20 @@ class _BlockySceneState extends State<BlockyScene> {
     final topY = height / 2 + 0.007;
     return MeshGeometry.fromArrays(
       positions: Float32List.fromList([
-        -width * 0.37,
+        // Retângulo largo e translúcido. Pela câmera isométrica ele assume
+        // exatamente a forma de paralelogramo do preview da Home.
+        -width * 0.42,
         topY,
-        -depth * 0.04,
-        -width * 0.03,
+        -depth * 0.2,
+        width * 0.06,
         topY,
-        -depth * 0.36,
-        width * 0.09,
+        -depth * 0.2,
+        width * 0.06,
         topY,
-        -depth * 0.27,
-        -width * 0.25,
+        depth * 0.08,
+        -width * 0.42,
         topY,
-        depth * 0.06,
+        depth * 0.08,
       ]),
       normals: Float32List.fromList([
         0.0,
@@ -673,10 +610,19 @@ class _BlockySceneState extends State<BlockyScene> {
     );
   }
 
-  UnlitMaterial _createClassicTopSheenMaterial() {
+  UnlitMaterial _createClassicTopSheenMaterial(int colorIndex) {
+    // O passe translúcido da Scene pode ser ocultado pela camada de sombra do
+    // topo. Pré-mesclar a cor reproduz a transparência visual em uma malha
+    // opaca, que permanece nítida em qualquer ordem de renderização.
+    const whiteMix = 0.34;
+    final color = _linearBlockColor(colorIndex);
     return UnlitMaterial()
-      ..baseColorFactor = vm.Vector4(1.0, 1.0, 1.0, 0.16)
-      ..alphaMode = AlphaMode.blend;
+      ..baseColorFactor = vm.Vector4(
+        color.x * (1 - whiteMix) + whiteMix,
+        color.y * (1 - whiteMix) + whiteMix,
+        color.z * (1 - whiteMix) + whiteMix,
+        1.0,
+      );
   }
 
   void _addJellyTopHighlight(
@@ -1335,7 +1281,7 @@ class _BlockySceneState extends State<BlockyScene> {
           );
 
     _scene.add(piece);
-    _fallingPieces.add(_FallingPiece(piece));
+    _fallingPieces.add(SceneFallingPiece(piece));
   }
 
   void _removeFallenPieces() {
@@ -1424,7 +1370,7 @@ class _BlockySceneState extends State<BlockyScene> {
 
     _scene.add(pulse);
     _perfectLightPulses.add(
-      _PerfectLightPulse(node: pulse, material: material, color: color),
+      ScenePerfectLightPulse(node: pulse, material: material, color: color),
     );
   }
 
@@ -1525,7 +1471,7 @@ class _BlockySceneState extends State<BlockyScene> {
 
     _scene.add(effectNode);
     _transientParticleEffects.add(
-      _TransientParticleEffect(
+      SceneTransientParticleEffect(
         effectNode,
         particles.effectDuration.inMicroseconds /
             Duration.microsecondsPerSecond,
@@ -1552,7 +1498,7 @@ class _BlockySceneState extends State<BlockyScene> {
     if (wobble.duration == Duration.zero) return;
 
     _perfectWobbles.add(
-      _PerfectWobble(
+      ScenePerfectWobble(
         node: block,
         basePosition: block.position,
         baseRotation: block.rotation,
@@ -1794,84 +1740,19 @@ class _BlockySceneState extends State<BlockyScene> {
   }
 
   void _beginGameOverCameraReveal() {
-    if (_isRevealingGameOver) return;
-
-    _isRevealingGameOver = true;
-    _gameOverRevealElapsedSeconds = 0.0;
-    _gameOverRevealStartPosition = vm.Vector3.copy(_camera.position);
-    _gameOverRevealStartTarget = vm.Vector3.copy(_camera.target);
-    final towerBaseY =
-        -GameConfig.blockHeight / 2 -
-        GameConfig.foundationHeight -
-        GameConfig.foundationBaseGlowHeight;
-    final towerTopY = _towerTopY + GameConfig.blockHeight / 2;
-    final towerHeight = math.max(
-      GameConfig.blockHeight,
-      towerTopY - towerBaseY,
+    _gameOverCameraReveal.start(
+      camera: _camera,
+      viewportSize: _viewportSize,
+      towerCenterX: _towerCenterX,
+      towerCenterZ: _towerCenterZ,
+      towerTopY: _towerTopY,
     );
-    _gameOverRevealEndTarget = vm.Vector3(
-      _towerCenterX,
-      towerBaseY + towerHeight * GameConfig.gameOverCameraTargetHeightRatio,
-      _towerCenterZ,
-    );
-
-    final viewDirection =
-        _gameOverRevealStartPosition - _gameOverRevealStartTarget;
-    final currentDistance = viewDirection.length;
-    viewDirection.normalize();
-    final viewportAspectRatio = _viewportSize.height == 0.0
-        ? 0.5
-        : _viewportSize.width / _viewportSize.height;
-    final horizontalFov =
-        2 * math.atan(math.tan(_camera.fovRadiansY / 2) * viewportAspectRatio);
-    final maximumVerticalExtent = math.max(
-      _gameOverRevealEndTarget.y - towerBaseY,
-      towerTopY - _gameOverRevealEndTarget.y,
-    );
-    final distanceNeededForHeight =
-        maximumVerticalExtent / math.tan(_camera.fovRadiansY / 2);
-    final towerFootprint = math.max(
-      GameConfig.foundationWidth,
-      GameConfig.foundationDepth,
-    );
-    final distanceNeededForWidth =
-        towerFootprint / (2 * math.tan(horizontalFov / 2));
-    final revealDistance =
-        math.max(
-          currentDistance,
-          math.max(distanceNeededForHeight, distanceNeededForWidth),
-        ) *
-        GameConfig.gameOverCameraFramingPadding;
-    _gameOverRevealEndPosition =
-        _gameOverRevealEndTarget + viewDirection * revealDistance;
   }
 
   void _updateGameOverCameraReveal(double deltaSeconds) {
-    if (!_isRevealingGameOver) return;
-
-    _gameOverRevealElapsedSeconds += deltaSeconds;
-    final revealDuration =
-        GameConfig.gameOverCameraRevealDuration.inMicroseconds /
-        Duration.microsecondsPerSecond;
-    final holdDuration =
-        GameConfig.gameOverCameraRevealHoldDuration.inMicroseconds /
-        Duration.microsecondsPerSecond;
-    final progress = (_gameOverRevealElapsedSeconds / revealDuration)
-        .clamp(0.0, 1.0)
-        .toDouble();
-    final easedProgress = 1.0 - math.pow(1.0 - progress, 3.0).toDouble();
-    _camera.position =
-        _gameOverRevealStartPosition +
-        (_gameOverRevealEndPosition - _gameOverRevealStartPosition) *
-            easedProgress;
-    _camera.target =
-        _gameOverRevealStartTarget +
-        (_gameOverRevealEndTarget - _gameOverRevealStartTarget) * easedProgress;
-
-    if (_gameOverRevealElapsedSeconds < revealDuration + holdDuration) return;
-
-    _isRevealingGameOver = false;
-    widget.gameController.completeGameOverPresentation();
+    if (_gameOverCameraReveal.update(_camera, deltaSeconds)) {
+      widget.gameController.completeGameOverPresentation();
+    }
   }
 
   void _updateCamera(double deltaSeconds) {
@@ -1915,7 +1796,7 @@ class _BlockySceneState extends State<BlockyScene> {
               _fallingPieces.isNotEmpty ||
               _impactBlock != null ||
               _recoveryBlock != null ||
-              _isRevealingGameOver ||
+              _gameOverCameraReveal.isActive ||
               _perfectWobbles.isNotEmpty ||
               _perfectLightPulses.isNotEmpty ||
               _transientParticleEffects.isNotEmpty,
@@ -1944,65 +1825,4 @@ class _BlockySceneState extends State<BlockyScene> {
       },
     );
   }
-}
-
-class _TransientParticleEffect {
-  _TransientParticleEffect(this.node, this.remainingSeconds);
-
-  final Node node;
-  double remainingSeconds;
-}
-
-class _BackgroundStar {
-  _BackgroundStar({
-    required this.node,
-    required this.material,
-    required this.horizontalOffset,
-    required this.verticalOffset,
-    required this.depth,
-    required this.blinkSpeed,
-    required this.blinkPhase,
-  });
-
-  final Node node;
-  final PhysicallyBasedMaterial material;
-  final double horizontalOffset;
-  final double verticalOffset;
-  final double depth;
-  final double blinkSpeed;
-  final double blinkPhase;
-  double elapsedSeconds = 0.0;
-}
-
-class _PerfectLightPulse {
-  _PerfectLightPulse({
-    required this.node,
-    required this.material,
-    required this.color,
-  });
-
-  final Node node;
-  final PhysicallyBasedMaterial material;
-  final vm.Vector4 color;
-  double elapsedSeconds = 0.0;
-}
-
-class _PerfectWobble {
-  _PerfectWobble({
-    required this.node,
-    required this.basePosition,
-    required this.baseRotation,
-  });
-
-  final Node node;
-  final vm.Vector3 basePosition;
-  final vm.Quaternion baseRotation;
-  double elapsedSeconds = 0.0;
-}
-
-class _FallingPiece {
-  _FallingPiece(this.node);
-
-  final Node node;
-  double elapsedSeconds = 0.0;
 }

@@ -293,6 +293,48 @@ void main() {
     );
   });
 
+  test('Perfects after score 20 slow blocks without going below the floor', () {
+    final gameController = BlockyGameController();
+    for (var index = 0; index < 19; index++) {
+      gameController.startNextBlock(isPerfect: true);
+    }
+
+    expect(
+      gameController.movingBlockSpeed,
+      GameConfig.movingBlockSpeedForScore(19),
+    );
+
+    for (var index = 0; index < 11; index++) {
+      gameController.startNextBlock(isPerfect: true);
+    }
+
+    expect(gameController.score, 30);
+    expect(
+      gameController.movingBlockSpeed,
+      GameConfig.minimumSpeedAfterPerfectRelief(),
+    );
+    gameController.dispose();
+  });
+
+  test('reduces the moving range as a block becomes thinner', () {
+    final fullSizeTravel = GameConfig.movingBlockTravelScale(
+      currentLength: GameConfig.blockWidth,
+      originalLength: GameConfig.blockWidth,
+    );
+    final reducedTravel = GameConfig.movingBlockTravelScale(
+      currentLength: GameConfig.blockWidth / 2,
+      originalLength: GameConfig.blockWidth,
+    );
+    final minimumTravel = GameConfig.movingBlockTravelScale(
+      currentLength: 0,
+      originalLength: GameConfig.blockWidth,
+    );
+
+    expect(fullSizeTravel, 1.0);
+    expect(reducedTravel, lessThan(fullSizeTravel));
+    expect(minimumTravel, GameConfig.movingBlockMinimumTravelScale);
+  });
+
   test('recovers a block length without exceeding its original maximum', () {
     expect(
       GameConfig.recoverBlockLength(

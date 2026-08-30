@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:blocky/game/blocky_coin_storage.dart';
 import 'package:blocky/game/best_score_storage.dart';
@@ -33,6 +34,7 @@ class BlockyGameController extends ChangeNotifier {
   Future<void> _coinSaveQueue = Future.value();
   int _round = 0;
   int _perfectStreak = 0;
+  int _perfectSpeedReliefCount = 0;
   bool _isShowingPerfect = false;
   String _perfectFeedbackText = 'PERFECT!';
   Timer? _perfectFeedbackTimer;
@@ -53,6 +55,17 @@ class BlockyGameController extends ChangeNotifier {
       _perfectStreak >= GameConfig.perfectStreakForRecovery;
   bool get isShowingPerfect => _isShowingPerfect;
   String get perfectFeedbackText => _perfectFeedbackText;
+  double get movingBlockSpeed {
+    final progressionSpeed = GameConfig.movingBlockSpeedForScore(_score);
+    if (_perfectSpeedReliefCount == 0) return progressionSpeed;
+
+    final relief =
+        _perfectSpeedReliefCount * GameConfig.perfectSpeedReliefPerPerfect;
+    return math.max(
+      GameConfig.minimumSpeedAfterPerfectRelief(),
+      progressionSpeed - relief,
+    );
+  }
 
   Future<void> loadBestScore() async {
     final storedBestScore = await _bestScoreStorage.load();
@@ -92,6 +105,9 @@ class BlockyGameController extends ChangeNotifier {
     }
     if (isPerfect) {
       _perfectStreak++;
+      if (_score >= GameConfig.perfectSpeedReliefStartScore) {
+        _perfectSpeedReliefCount++;
+      }
       _showPerfectFeedback();
     } else {
       _perfectStreak = 0;
@@ -138,6 +154,7 @@ class BlockyGameController extends ChangeNotifier {
     _score = 0;
     _coinsEarnedThisGame = 0;
     _perfectStreak = 0;
+    _perfectSpeedReliefCount = 0;
     _movingAxis = MovingBlockAxis.x;
     _status = GameStatus.playing;
     _isMoving = true;

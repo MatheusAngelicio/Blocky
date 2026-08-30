@@ -1159,8 +1159,21 @@ class _BlockySceneState extends State<BlockyScene> {
     final movingLength = widget.gameController.movingAxis == MovingBlockAxis.x
         ? _towerWidth
         : _towerDepth;
+    final originalLength = widget.gameController.movingAxis == MovingBlockAxis.x
+        ? GameConfig.blockWidth
+        : GameConfig.blockDepth;
+    final travelScale = GameConfig.movingBlockTravelScale(
+      currentLength: movingLength,
+      originalLength: originalLength,
+    );
 
-    return math.max(0.0, visibleHalfWidth - movingLength / 2);
+    // Permite que o bloco percorra um pouco além da área enquadrada antes de
+    // inverter. Conforme o bloco é cortado, o percurso no eixo reduzido fica
+    // menor; a regra de overlap continua usando apenas a geometria da torre.
+    final fullTravel =
+        math.max(0.0, visibleHalfWidth - movingLength / 2) +
+        GameConfig.movingBlockViewportOverscan;
+    return fullTravel * travelScale;
   }
 
   void _moveBlock(double deltaSeconds, double limit) {
@@ -1170,9 +1183,7 @@ class _BlockySceneState extends State<BlockyScene> {
     final movesOnX = widget.gameController.movingAxis == MovingBlockAxis.x;
     final currentCoordinate = movesOnX ? position.x : position.z;
     final movementCenter = movesOnX ? _towerCenterX : _towerCenterZ;
-    final speed = GameConfig.movingBlockSpeedForScore(
-      widget.gameController.score,
-    );
+    final speed = widget.gameController.movingBlockSpeed;
     final nextCoordinate =
         currentCoordinate + _movingDirection * speed * deltaSeconds;
     if (nextCoordinate >= movementCenter + limit ||

@@ -15,9 +15,21 @@ abstract final class GameConfig {
   static const foundationBaseGlowDepth = 5.16;
   static const foundationBaseGlowHeight = 0.025;
   static const movingBlockCenterY = 0.64;
-  static const movingBlockInitialSpeed = 3.5;
-  static const movingBlockMaximumSpeed = 7.0;
-  static const movingBlockSpeedGrowthRate = 0.07;
+  // Curva de dificuldade: começa mais ágil, mas cresce ao longo de uma partida
+  // maior. Em torno de 94 blocos, ela terá percorrido 95% do caminho ao teto.
+  static const movingBlockInitialSpeed = 4.4;
+  static const movingBlockMaximumSpeed = 11.0;
+  static const movingBlockSpeedGrowthRate = 0.032;
+  // A partir deste score, Perfects aliviam gradualmente a velocidade. O piso
+  // é a velocidade que a curva já teria atingido neste mesmo score.
+  static const perfectSpeedReliefStartScore = 20;
+  static const perfectSpeedReliefPerPerfect = 0.18;
+  // Distância extra além da borda visível antes do bloco inverter. Aplica-se
+  // aos dois eixos de movimento (X e Z) para manter o percurso mais amplo.
+  static const movingBlockViewportOverscan = 2.2;
+  // Mesmo quando muito fino, o bloco mantém um pequeno percurso para o jogo
+  // continuar controlável. A escala reduz linearmente conforme ele é cortado.
+  static const movingBlockMinimumTravelScale = 0.70;
   static const cameraFollowSpeed = 3.5;
   static const cameraHorizontalFollowSpeed = 7.0;
   static const physicsGravity = 9.81;
@@ -82,6 +94,19 @@ abstract final class GameConfig {
     return movingBlockMaximumSpeed -
         (movingBlockMaximumSpeed - movingBlockInitialSpeed) *
             math.exp(-score * movingBlockSpeedGrowthRate);
+  }
+
+  static double minimumSpeedAfterPerfectRelief() {
+    return movingBlockSpeedForScore(perfectSpeedReliefStartScore);
+  }
+
+  static double movingBlockTravelScale({
+    required double currentLength,
+    required double originalLength,
+  }) {
+    final sizeRatio = (currentLength / originalLength).clamp(0.0, 1.0);
+    return movingBlockMinimumTravelScale +
+        (1.0 - movingBlockMinimumTravelScale) * sizeRatio;
   }
 
   static double recoverBlockLength({

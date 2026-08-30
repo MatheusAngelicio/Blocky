@@ -13,7 +13,13 @@ enum BlockImpactMotion { standard, squashAndStretch, firmSettle }
 ///
 /// Eles são recriados quando um bloco é cortado, mantendo a regra e o
 /// collider do jogo sempre como uma caixa simples.
-enum BlockSurfaceDetail { none, cheeseHoles, chocolateSegments }
+enum BlockSurfaceDetail {
+  none,
+  classicTopSheen,
+  jellyTopHighlight,
+  cheeseHoles,
+  chocolateSegments,
+}
 
 /// Define uma sequência de cores próxima entre blocos da mesma partida.
 class BlockColorProgression {
@@ -186,7 +192,7 @@ class BlockThemeVisual {
 
   static const classic = BlockThemeVisual(
     theme: BlockTheme.classic,
-    surfaceDetail: BlockSurfaceDetail.none,
+    surfaceDetail: BlockSurfaceDetail.classicTopSheen,
     placementImpact: BlockImpactVisual(
       motion: BlockImpactMotion.standard,
       duration: GameConfig.placementImpactDuration,
@@ -248,7 +254,7 @@ class BlockThemeVisual {
 
   static const jelly = BlockThemeVisual(
     theme: BlockTheme.jelly,
-    surfaceDetail: BlockSurfaceDetail.none,
+    surfaceDetail: BlockSurfaceDetail.jellyTopHighlight,
     placementImpact: BlockImpactVisual(
       motion: BlockImpactMotion.squashAndStretch,
       duration: Duration(milliseconds: 180),

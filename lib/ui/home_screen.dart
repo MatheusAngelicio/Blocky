@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:blocky/app/blocky_arcade.dart';
 import 'package:blocky/app/blocky_colors.dart';
 import 'package:blocky/game/best_score_storage.dart';
@@ -133,16 +135,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Column(
                           children: [
                             Text(
-                              '${_themeName(_selectedTheme).toUpperCase()} BLOCKS',
+                              'CURRENT SET · ${_themeName(_selectedTheme).toUpperCase()}',
                               style: BlockyTypography.label.copyWith(
                                 color: themeColor,
-                                fontSize: 14,
+                                fontSize: 12,
                                 letterSpacing: 1.5,
                               ),
                             ),
                             const SizedBox(height: 4),
                             SizedBox(
-                              height: 190,
+                              height: 205,
                               child: CustomPaint(
                                 painter: _ThemeTowerPainter(_selectedTheme),
                                 child: const SizedBox.expand(),
@@ -235,8 +237,12 @@ class _ThemeOption extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(width: 18, height: 18, color: color),
-              const SizedBox(width: 14),
+              SizedBox(
+                width: 42,
+                height: 34,
+                child: CustomPaint(painter: _ThemeSwatchPainter(theme)),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   _themeName(theme).toUpperCase(),
@@ -266,43 +272,179 @@ class _ThemeTowerPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final colors = BlockyColors.themePreviewTower(theme);
-    const blockHeight = 25.0;
     final centerX = size.width / 2;
+    final accent = BlockyColors.themeAccent(theme);
+
+    final backdrop = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      const Radius.circular(4),
+    );
+    canvas.drawRRect(backdrop, Paint()..color = accent.withValues(alpha: 0.08));
+    canvas.drawCircle(
+      Offset(size.width * 0.78, size.height * 0.22),
+      size.width * 0.16,
+      Paint()..color = accent.withValues(alpha: 0.09),
+    );
+
+    final foundationWidth = size.width * 0.78;
+    _drawPreviewBlock(
+      canvas,
+      theme: theme,
+      color: _darken(colors.first, 0.12),
+      x: centerX - foundationWidth / 2,
+      y: size.height - 34,
+      width: foundationWidth,
+      depth: foundationWidth * 0.17,
+      height: 15,
+      details: false,
+    );
 
     for (var index = 0; index < colors.length; index++) {
       final progress = index / (colors.length - 1);
-      final width = size.width * (0.86 - progress * 0.32);
-      final x = centerX - width / 2 + progress * 8;
-      final y = size.height - 42 - index * 28;
-      final depth = width * 0.16;
-      final top = Path()
-        ..moveTo(x, y + depth)
-        ..lineTo(x + width * 0.5, y)
-        ..lineTo(x + width, y + depth)
-        ..lineTo(x + width * 0.5, y + depth * 2)
-        ..close();
-      final right = Path()
-        ..moveTo(x + width, y + depth)
-        ..lineTo(x + width * 0.5, y + depth * 2)
-        ..lineTo(x + width * 0.5, y + depth * 2 + blockHeight)
-        ..lineTo(x + width, y + depth + blockHeight)
-        ..close();
-      final front = Path()
-        ..moveTo(x, y + depth)
-        ..lineTo(x + width * 0.5, y + depth * 2)
-        ..lineTo(x + width * 0.5, y + depth * 2 + blockHeight)
-        ..lineTo(x, y + depth + blockHeight)
-        ..close();
-
-      canvas.drawPath(top, Paint()..color = _lighten(colors[index], 0.17));
-      canvas.drawPath(right, Paint()..color = _darken(colors[index], 0.2));
-      canvas.drawPath(front, Paint()..color = colors[index]);
+      final width = size.width * (0.7 - progress * 0.26);
+      _drawPreviewBlock(
+        canvas,
+        theme: theme,
+        color: colors[index],
+        x: centerX - width / 2 + progress * 7,
+        y: size.height - 50 - index * 25,
+        width: width,
+        depth: width * 0.17,
+        height: 20,
+      );
     }
+
+    // Um bloco deslocado deixa claro, mesmo na Home, que este é o tema usado
+    // durante uma partida e não apenas uma paleta de cores.
+    final movingWidth = size.width * 0.46;
+    _drawPreviewBlock(
+      canvas,
+      theme: theme,
+      color: colors.last,
+      x: centerX + size.width * 0.04,
+      y: size.height - 50 - colors.length * 25 - 9,
+      width: movingWidth,
+      depth: movingWidth * 0.17,
+      height: 20,
+    );
   }
 
   @override
   bool shouldRepaint(_ThemeTowerPainter oldDelegate) =>
       oldDelegate.theme != theme;
+}
+
+class _ThemeSwatchPainter extends CustomPainter {
+  const _ThemeSwatchPainter(this.theme);
+
+  final BlockTheme theme;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final color = BlockyColors.themePreviewTower(theme).elementAt(2);
+    _drawPreviewBlock(
+      canvas,
+      theme: theme,
+      color: color,
+      x: 1,
+      y: 4,
+      width: size.width - 6,
+      depth: 7,
+      height: 12,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ThemeSwatchPainter oldDelegate) =>
+      oldDelegate.theme != theme;
+}
+
+void _drawPreviewBlock(
+  Canvas canvas, {
+  required BlockTheme theme,
+  required Color color,
+  required double x,
+  required double y,
+  required double width,
+  required double depth,
+  required double height,
+  bool details = true,
+}) {
+  final top = Path()
+    ..moveTo(x, y + depth)
+    ..lineTo(x + width * 0.5, y)
+    ..lineTo(x + width, y + depth)
+    ..lineTo(x + width * 0.5, y + depth * 2)
+    ..close();
+  final right = Path()
+    ..moveTo(x + width, y + depth)
+    ..lineTo(x + width * 0.5, y + depth * 2)
+    ..lineTo(x + width * 0.5, y + depth * 2 + height)
+    ..lineTo(x + width, y + depth + height)
+    ..close();
+  final front = Path()
+    ..moveTo(x, y + depth)
+    ..lineTo(x + width * 0.5, y + depth * 2)
+    ..lineTo(x + width * 0.5, y + depth * 2 + height)
+    ..lineTo(x, y + depth + height)
+    ..close();
+
+  canvas.drawPath(top, Paint()..color = _lighten(color, 0.2));
+  canvas.drawPath(right, Paint()..color = _darken(color, 0.25));
+  canvas.drawPath(front, Paint()..color = color);
+
+  if (!details) return;
+
+  switch (theme) {
+    case BlockTheme.classic:
+      canvas.drawPath(
+        Path()
+          ..moveTo(x + width * 0.13, y + depth * 1.08)
+          ..lineTo(x + width * 0.48, y + depth * 0.38)
+          ..lineTo(x + width * 0.59, y + depth * 0.48)
+          ..lineTo(x + width * 0.24, y + depth * 1.18)
+          ..close(),
+        Paint()..color = BlockyColors.white.withValues(alpha: 0.13),
+      );
+    case BlockTheme.jelly:
+      canvas.drawLine(
+        Offset(x + width * 0.12, y + depth + height * 0.28),
+        Offset(x + width * 0.48, y + depth * 1.72 + height * 0.28),
+        Paint()
+          ..color = BlockyColors.white.withValues(alpha: 0.23)
+          ..strokeWidth = 1.4,
+      );
+    case BlockTheme.chocolate:
+      final groove = Paint()
+        ..color = _darken(color, 0.48).withValues(alpha: 0.72)
+        ..strokeWidth = math.max(1, width * 0.018);
+      for (final fraction in const [0.34, 0.66]) {
+        canvas.drawLine(
+          Offset(x + width * fraction, y + depth * (1 - fraction)),
+          Offset(x + width * fraction, y + depth * (2 - fraction)),
+          groove,
+        );
+      }
+      canvas.drawLine(
+        Offset(x + width * 0.2, y + depth),
+        Offset(x + width * 0.8, y + depth),
+        groove,
+      );
+    case BlockTheme.cheese:
+      final hole = Paint()..color = _darken(color, 0.38);
+      for (final point in const [Offset(0.37, 0.72), Offset(0.61, 0.91)]) {
+        canvas.drawCircle(
+          Offset(x + width * point.dx, y + depth * point.dy),
+          math.max(1.5, width * 0.04),
+          hole,
+        );
+      }
+      canvas.drawCircle(
+        Offset(x + width * 0.22, y + depth + height * 0.45),
+        math.max(1.2, width * 0.028),
+        hole,
+      );
+  }
 }
 
 String _themeName(BlockTheme theme) => switch (theme) {

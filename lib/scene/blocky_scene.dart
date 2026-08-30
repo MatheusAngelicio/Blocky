@@ -451,6 +451,22 @@ class _BlockySceneState extends State<BlockyScene> {
     switch (_blockThemeVisual.surfaceDetail) {
       case BlockSurfaceDetail.none:
         return;
+      case BlockSurfaceDetail.classicTopSheen:
+        _addClassicTopSheen(
+          block,
+          width: width,
+          depth: depth,
+          height: height,
+          colorIndex: colorIndex,
+        );
+      case BlockSurfaceDetail.jellyTopHighlight:
+        _addJellyTopHighlight(
+          block,
+          width: width,
+          depth: depth,
+          height: height,
+          colorIndex: colorIndex,
+        );
       case BlockSurfaceDetail.cheeseHoles:
         _addCheeseHoleDetails(
           block,
@@ -583,6 +599,273 @@ class _BlockySceneState extends State<BlockyScene> {
       )
       ..metallicFactor = 0.0
       ..roughnessFactor = 0.94;
+  }
+
+  void _addClassicTopSheen(
+    Node block, {
+    required double width,
+    required double depth,
+    required double height,
+    required int colorIndex,
+  }) {
+    // O mesmo reflexo diagonal da miniatura da Home, mas em uma única malha
+    // plana sobre o topo. Ele não altera a caixa lógica do bloco.
+    final details = <Node>[];
+    _addPreviewSideFaces(
+      block,
+      details,
+      width: width,
+      depth: depth,
+      height: height,
+      colorIndex: colorIndex,
+    );
+    final sheen = Node(
+      mesh: Mesh(
+        _createClassicTopSheenGeometry(
+          width: width,
+          depth: depth,
+          height: height,
+        ),
+        _createClassicTopSheenMaterial(),
+      ),
+    )..castsShadows = false;
+    block.add(sheen);
+    details.add(sheen);
+    _surfaceDetails[block] = details;
+  }
+
+  MeshGeometry _createClassicTopSheenGeometry({
+    required double width,
+    required double depth,
+    required double height,
+  }) {
+    final topY = height / 2 + 0.007;
+    return MeshGeometry.fromArrays(
+      positions: Float32List.fromList([
+        -width * 0.37,
+        topY,
+        -depth * 0.04,
+        -width * 0.03,
+        topY,
+        -depth * 0.36,
+        width * 0.09,
+        topY,
+        -depth * 0.27,
+        -width * 0.25,
+        topY,
+        depth * 0.06,
+      ]),
+      normals: Float32List.fromList([
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+      ]),
+      indices: [0, 1, 2, 0, 2, 3],
+    );
+  }
+
+  UnlitMaterial _createClassicTopSheenMaterial() {
+    return UnlitMaterial()
+      ..baseColorFactor = vm.Vector4(1.0, 1.0, 1.0, 0.16)
+      ..alphaMode = AlphaMode.blend;
+  }
+
+  void _addJellyTopHighlight(
+    Node block, {
+    required double width,
+    required double depth,
+    required double height,
+    required int colorIndex,
+  }) {
+    // O risco claro fica próximo da borda frontal da face superior. É um
+    // detalhe visual independente da caixa lógica e acompanha cortes/restart.
+    final details = <Node>[];
+    _addPreviewSideFaces(
+      block,
+      details,
+      width: width,
+      depth: depth,
+      height: height,
+      colorIndex: colorIndex,
+    );
+    final highlight =
+        Node(
+            mesh: Mesh(
+              _surfaceDetailUnitCube,
+              _createJellyTopHighlightMaterial(),
+            ),
+          )
+          ..position = vm.Vector3(
+            // O highlight acompanha a lateral esquerda da face superior, e
+            // não a borda frontal do bloco.
+            -width / 2 + width * 0.055,
+            height / 2 + 0.007,
+            // Puxa o detalhe para a ponta frontal da lateral, deixando-o
+            // visualmente mais baixo no enquadramento isométrico.
+            -depth * 0.16,
+          )
+          ..scale = vm.Vector3(
+            math.max(0.008, width * 0.009),
+            0.005,
+            // Não alcança a ponta inferior da lateral: fica uma margem que
+            // evita a aparência de um contorno colado na borda.
+            depth * 0.5,
+          )
+          ..castsShadows = false;
+    block.add(highlight);
+    details.add(highlight);
+    _surfaceDetails[block] = details;
+  }
+
+  void _addPreviewSideFaces(
+    Node block,
+    List<Node> details, {
+    required double width,
+    required double depth,
+    required double height,
+    required int colorIndex,
+  }) {
+    // A câmera enxerga as faces -X (à esquerda) e -Z (à direita). Mantê-las
+    // sem luz dinâmica reproduz o contraste deliberado do preview da Home:
+    // esquerda clara e direita escura, em qualquer cor do tema.
+    final leftFace = Node(
+      mesh: Mesh(
+        _createPreviewSideGeometry(
+          width: width,
+          depth: depth,
+          height: height,
+          leftSide: true,
+        ),
+        _createPreviewSideMaterial(colorIndex, brightness: 1.0),
+      ),
+    )..castsShadows = false;
+    final rightFace = Node(
+      mesh: Mesh(
+        _createPreviewSideGeometry(
+          width: width,
+          depth: depth,
+          height: height,
+          leftSide: false,
+        ),
+        _createPreviewSideMaterial(colorIndex, brightness: 0.75),
+      ),
+    )..castsShadows = false;
+    block
+      ..add(leftFace)
+      ..add(rightFace);
+    details
+      ..add(leftFace)
+      ..add(rightFace);
+  }
+
+  MeshGeometry _createPreviewSideGeometry({
+    required double width,
+    required double depth,
+    required double height,
+    required bool leftSide,
+  }) {
+    const faceOffset = 0.005;
+    final halfWidth = width / 2;
+    final halfDepth = depth / 2;
+    final halfHeight = height / 2;
+    if (leftSide) {
+      return MeshGeometry.fromArrays(
+        positions: Float32List.fromList([
+          -halfWidth - faceOffset,
+          -halfHeight,
+          halfDepth,
+          -halfWidth - faceOffset,
+          -halfHeight,
+          -halfDepth,
+          -halfWidth - faceOffset,
+          halfHeight,
+          halfDepth,
+          -halfWidth - faceOffset,
+          halfHeight,
+          -halfDepth,
+        ]),
+        normals: Float32List.fromList([
+          -1.0,
+          0.0,
+          0.0,
+          -1.0,
+          0.0,
+          0.0,
+          -1.0,
+          0.0,
+          0.0,
+          -1.0,
+          0.0,
+          0.0,
+        ]),
+        indices: [0, 2, 1, 1, 2, 3],
+      );
+    }
+
+    return MeshGeometry.fromArrays(
+      positions: Float32List.fromList([
+        -halfWidth,
+        -halfHeight,
+        -halfDepth - faceOffset,
+        halfWidth,
+        -halfHeight,
+        -halfDepth - faceOffset,
+        -halfWidth,
+        halfHeight,
+        -halfDepth - faceOffset,
+        halfWidth,
+        halfHeight,
+        -halfDepth - faceOffset,
+      ]),
+      normals: Float32List.fromList([
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        -1.0,
+      ]),
+      indices: [0, 2, 1, 1, 2, 3],
+    );
+  }
+
+  UnlitMaterial _createPreviewSideMaterial(
+    int colorIndex, {
+    required double brightness,
+  }) {
+    final color = _linearBlockColor(colorIndex);
+    return UnlitMaterial()
+      ..baseColorFactor = vm.Vector4(
+        color.x * brightness,
+        color.y * brightness,
+        color.z * brightness,
+        1.0,
+      );
+  }
+
+  PhysicallyBasedMaterial _createJellyTopHighlightMaterial() {
+    return PhysicallyBasedMaterial()
+      ..baseColorFactor = vm.Vector4(1.0, 1.0, 0.99, 0.28)
+      ..emissiveFactor = vm.Vector4(1.0, 1.0, 0.97, 1.0)
+      ..emissiveStrength = 0.04
+      ..metallicFactor = 0.0
+      ..roughnessFactor = 0.48
+      ..alphaMode = AlphaMode.blend;
   }
 
   void _addChocolateSegmentDetails(

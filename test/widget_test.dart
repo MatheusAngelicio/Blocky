@@ -93,6 +93,14 @@ void main() {
       BlockThemeVisual.jelly.roughnessFactor,
       BlockThemeVisual.classic.roughnessFactor,
     );
+    expect(
+      BlockThemeVisual.jelly.surfaceDetail,
+      BlockSurfaceDetail.jellyTopHighlight,
+    );
+    expect(
+      BlockThemeVisual.classic.surfaceDetail,
+      BlockSurfaceDetail.classicTopSheen,
+    );
     expect(BlockThemeVisual.jelly.materialAlpha, 1.0);
     expect(BlockThemeVisual.jelly.transmission, 0.0);
     expect(

@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:blocky/game/block_theme.dart';
 import 'package:blocky/game/game_haptics.dart';
@@ -9,8 +8,10 @@ import 'package:blocky/game/game_config.dart';
 import 'package:blocky/game/game_sound.dart';
 import 'package:blocky/scene/block_theme_visual.dart';
 import 'package:blocky/scene/block_theme_scene_renderer.dart';
-import 'package:blocky/scene/scene_effect_models.dart';
 import 'package:blocky/scene/scene_background_stars.dart';
+import 'package:blocky/scene/scene_block_factory.dart';
+import 'package:blocky/scene/scene_falling_piece_manager.dart';
+import 'package:blocky/scene/scene_feedback_controller.dart';
 import 'package:blocky/scene/scene_game_over_camera_reveal.dart';
 import 'package:blocky/scene/sky_progression.dart';
 import 'package:flutter/widgets.dart' hide BoxShape;
@@ -36,11 +37,6 @@ class BlockyScene extends StatefulWidget {
 }
 
 class _BlockySceneState extends State<BlockyScene> {
-  // Pedaços cortados só precisam colidir com a torre. Separá-los em camadas
-  // evita que vários pedaços fora da tela fiquem simulando colisões entre si.
-  static const _towerCollisionLayer = 0x1;
-  static const _fallingPieceCollisionLayer = 0x2;
-
   static const _initialCameraPositionX = -7.0;
   static const _initialCameraPositionY = 9.4;
   static const _initialCameraPositionZ = -12.5;
@@ -48,7 +44,9 @@ class _BlockySceneState extends State<BlockyScene> {
 
   final Scene _scene = Scene();
   late final BlockThemeVisual _blockThemeVisual;
-  late final BlockThemeSceneRenderer _themeSceneRenderer;
+  late final SceneBlockFactory _blockFactory;
+  late final SceneFallingPieceManager _fallingPieceManager;
+  late final SceneFeedbackController _feedbackController;
   late final GradientSkySource _skySource;
   late SkyProgressionVariation _skyVariation;
   PhysicsWorld? _physicsWorld;
@@ -85,27 +83,30 @@ class _BlockySceneState extends State<BlockyScene> {
   int _nextBlockColorIndex = 0;
   late int _movingBlockColorIndex;
   int _sceneRound = -1;
-  final List<SceneFallingPiece> _fallingPieces = [];
   late final SceneBackgroundStars _backgroundStars;
-  final List<SceneTransientParticleEffect> _transientParticleEffects = [];
-  final List<ScenePerfectLightPulse> _perfectLightPulses = [];
-  final List<ScenePerfectWobble> _perfectWobbles = [];
-  final Map<Node, Node> _topFaceShades = {};
-  Node? _impactBlock;
-  double _impactElapsedSeconds = 0.0;
-  Node? _recoveryBlock;
-  MovingBlockAxis? _recoveryAxis;
-  double _recoveryInitialScale = 1.0;
-  double _recoveryElapsedSeconds = 0.0;
 
   @override
   void initState() {
     super.initState();
     _blockThemeVisual = BlockThemeVisual.forTheme(widget.blockTheme);
-    _themeSceneRenderer = BlockThemeSceneRenderer(
+    final themeSceneRenderer = BlockThemeSceneRenderer(
       visual: _blockThemeVisual,
       colorForIndex: _linearBlockColor,
       random: _random,
+    );
+    _blockFactory = SceneBlockFactory(
+      themeRenderer: themeSceneRenderer,
+      colorForIndex: _linearBlockColor,
+    );
+    _fallingPieceManager = SceneFallingPieceManager(
+      scene: _scene,
+      blockFactory: _blockFactory,
+      fallingVisual: _blockThemeVisual.fallingVisual,
+    );
+    _feedbackController = SceneFeedbackController(
+      scene: _scene,
+      visual: _blockThemeVisual,
+      colorForIndex: _linearBlockColor,
     );
     _backgroundStars = SceneBackgroundStars(scene: _scene, random: _random);
     widget.gameController.addListener(_onGameStateChanged);
@@ -115,6 +116,10 @@ class _BlockySceneState extends State<BlockyScene> {
   @override
   void dispose() {
     widget.gameController.removeListener(_onGameStateChanged);
+    _feedbackController.clear();
+    _fallingPieceManager.clear();
+    _blockFactory.clear();
+    _backgroundStars.clear();
     _scene.removeAll();
     final physicsWorld = _physicsWorld;
     if (physicsWorld != null) {
@@ -193,19 +198,11 @@ class _BlockySceneState extends State<BlockyScene> {
   }
 
   void _resetRoundScene() {
-    _scene.removeAll();
-    _fallingPieces.clear();
+    _feedbackController.clear();
+    _fallingPieceManager.clear();
+    _blockFactory.clear();
     _backgroundStars.clear();
-    _transientParticleEffects.clear();
-    _perfectLightPulses.clear();
-    _perfectWobbles.clear();
-    _topFaceShades.clear();
-    _themeSceneRenderer.clear();
-    _impactBlock = null;
-    _impactElapsedSeconds = 0.0;
-    _recoveryBlock = null;
-    _recoveryAxis = null;
-    _recoveryElapsedSeconds = 0.0;
+    _scene.removeAll();
     _sceneRound = widget.gameController.round;
     _hasResolvedPlacement = false;
     _gameOverCameraReveal.reset();
@@ -230,32 +227,13 @@ class _BlockySceneState extends State<BlockyScene> {
     final baseBlockColorIndex = _nextBlockColorIndex++;
     final foundationTopY = -GameConfig.blockHeight / 2;
     _scene.add(
-      Node(
-          mesh: Mesh(
-            CuboidGeometry(
-              vm.Vector3(
-                GameConfig.foundationBaseGlowWidth,
-                GameConfig.foundationBaseGlowHeight,
-                GameConfig.foundationBaseGlowDepth,
-              ),
-            ),
-            _createFoundationBaseGlowMaterial(
-              _linearBlockColor(baseBlockColorIndex),
-            ),
-          ),
-        )
-        ..position = vm.Vector3(
-          0.0,
-          foundationTopY -
-              GameConfig.foundationHeight -
-              GameConfig.foundationBaseGlowHeight / 2 -
-              0.008,
-          0.0,
-        )
-        ..castsShadows = false,
+      _blockFactory.createFoundationGlow(
+        topY: foundationTopY,
+        color: _linearBlockColor(baseBlockColorIndex),
+      ),
     );
     final foundation =
-        _createBlockNode(
+        _blockFactory.createBlock(
             width: GameConfig.foundationWidth,
             depth: GameConfig.foundationDepth,
             height: GameConfig.foundationHeight,
@@ -270,7 +248,7 @@ class _BlockySceneState extends State<BlockyScene> {
             foundationTopY - GameConfig.foundationHeight / 2,
             0.0,
           );
-    _addTowerCollider(
+    _blockFactory.addTowerCollider(
       foundation,
       width: GameConfig.foundationWidth,
       depth: GameConfig.foundationDepth,
@@ -278,7 +256,7 @@ class _BlockySceneState extends State<BlockyScene> {
     );
     _scene.add(foundation);
 
-    final baseBlock = _createBlockNode(
+    final baseBlock = _blockFactory.createBlock(
       width: GameConfig.blockWidth,
       depth: GameConfig.blockDepth,
       colorIndex: baseBlockColorIndex,
@@ -287,7 +265,7 @@ class _BlockySceneState extends State<BlockyScene> {
         initialHue: _initialBlockHue,
       ),
     );
-    _addTowerCollider(
+    _blockFactory.addTowerCollider(
       baseBlock,
       width: GameConfig.blockWidth,
       depth: GameConfig.blockDepth,
@@ -313,187 +291,6 @@ class _BlockySceneState extends State<BlockyScene> {
     );
   }
 
-  MeshGeometry _createBlockGeometry(
-    double width,
-    double depth, {
-    double height = GameConfig.blockHeight,
-  }) {
-    return CuboidGeometry(vm.Vector3(width, height, depth));
-  }
-
-  PhysicallyBasedMaterial _createFoundationBaseGlowMaterial(vm.Vector4 color) {
-    return PhysicallyBasedMaterial()
-      ..baseColorFactor = vm.Vector4(color.x, color.y, color.z, 0.48)
-      ..emissiveFactor = vm.Vector4(color.x, color.y, color.z, 1.0)
-      ..emissiveStrength = 1.1
-      ..metallicFactor = 0.0
-      ..roughnessFactor = 0.8
-      ..alphaMode = AlphaMode.blend;
-  }
-
-  Node _createBlockNode({
-    required double width,
-    required double depth,
-    double height = GameConfig.blockHeight,
-    required int colorIndex,
-    required PhysicallyBasedMaterial material,
-  }) {
-    final block = Node(
-      mesh: Mesh(_createBlockGeometry(width, depth, height: height), material),
-    );
-    final topFaceShade =
-        Node(
-            mesh: Mesh(
-              _createTopFaceShadeGeometry(width, depth),
-              _createTopFaceShadeMaterial(colorIndex),
-            ),
-          )
-          ..position = vm.Vector3(0.0, height / 2 + 0.003, 0.0)
-          // A camada recebe a luz e as sombras da cena, mas não deve projetar uma
-          // segunda sombra sobre a torre.
-          ..castsShadows = false;
-    block.add(topFaceShade);
-    _topFaceShades[block] = topFaceShade;
-    _updateBlockSurfaceDetails(
-      block,
-      width: width,
-      depth: depth,
-      height: height,
-      colorIndex: colorIndex,
-    );
-    return block;
-  }
-
-  void _updateBlockSurfaceDetails(
-    Node block, {
-    required double width,
-    required double depth,
-    required double height,
-    required int colorIndex,
-  }) {
-    _themeSceneRenderer.updateDetails(
-      block: block,
-      width: width,
-      depth: depth,
-      height: height,
-      colorIndex: colorIndex,
-    );
-  }
-
-  void _addTowerCollider(
-    Node block, {
-    required double width,
-    required double depth,
-    double height = GameConfig.blockHeight,
-  }) {
-    block
-      ..addComponent(RigidBody(type: BodyType.fixed))
-      ..addComponent(
-        Collider(
-          shape: BoxShape(
-            halfExtents: vm.Vector3(width / 2, height / 2, depth / 2),
-          ),
-          collisionLayer: _towerCollisionLayer,
-          collisionMask: _fallingPieceCollisionLayer,
-        ),
-      );
-  }
-
-  MeshGeometry _createTopFaceShadeGeometry(double width, double depth) {
-    const inset = 0.006;
-    final halfWidth = math.max(0.001, width / 2 - inset);
-    final halfDepth = math.max(0.001, depth / 2 - inset);
-
-    // A face mais próxima da câmera permanece luminosa; a face mais distante
-    // recebe uma atenuação suave. Isso reproduz a profundidade do mockup sem
-    // depender exclusivamente da resolução do shadow map.
-    return MeshGeometry.fromArrays(
-      positions: Float32List.fromList([
-        -halfWidth,
-        0.0,
-        -halfDepth,
-        halfWidth,
-        0.0,
-        -halfDepth,
-        -halfWidth,
-        0.0,
-        halfDepth,
-        halfWidth,
-        0.0,
-        halfDepth,
-      ]),
-      normals: Float32List.fromList([
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-      ]),
-      // A camada de sombra também usa a textura do bloco. Sem UVs, todos os
-      // vértices amostrariam o mesmo pixel e esconderiam o relevo do
-      // chocolate na face superior.
-      texCoords: Float32List.fromList([0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0]),
-      colors: Float32List.fromList([
-        1.0,
-        1.0,
-        1.0,
-        1.0,
-        1.0,
-        1.0,
-        1.0,
-        1.0,
-        0.72,
-        0.72,
-        0.72,
-        1.0,
-        0.72,
-        0.72,
-        0.72,
-        1.0,
-      ]),
-      indices: [0, 2, 1, 1, 2, 3],
-    );
-  }
-
-  PhysicallyBasedMaterial _createTopFaceShadeMaterial(int colorIndex) {
-    return PhysicallyBasedMaterial()
-      ..baseColorFactor = _linearBlockColor(colorIndex)
-      ..metallicFactor = 0.0
-      ..roughnessFactor = 0.78
-      ..vertexColorWeight = 1.0;
-  }
-
-  void _updateBlockGeometry(
-    Node block, {
-    required double width,
-    required double depth,
-    required int colorIndex,
-    required PhysicallyBasedMaterial material,
-  }) {
-    block.mesh = Mesh(_createBlockGeometry(width, depth), material);
-    final topFaceShade = _topFaceShades[block];
-    if (topFaceShade == null) return;
-
-    topFaceShade.mesh = Mesh(
-      _createTopFaceShadeGeometry(width, depth),
-      _createTopFaceShadeMaterial(colorIndex),
-    );
-    _updateBlockSurfaceDetails(
-      block,
-      width: width,
-      depth: depth,
-      height: GameConfig.blockHeight,
-      colorIndex: colorIndex,
-    );
-  }
-
   vm.Vector4 _linearBlockColor(int colorIndex, {double alpha = 1.0}) {
     return _blockThemeVisual.blockColor(
       colorIndex,
@@ -511,7 +308,7 @@ class _BlockySceneState extends State<BlockyScene> {
       initialHue: _initialBlockHue,
     );
     _movingBlock =
-        _createBlockNode(
+        _blockFactory.createBlock(
             width: _towerWidth,
             depth: _towerDepth,
             colorIndex: _movingBlockColorIndex,
@@ -555,12 +352,22 @@ class _BlockySceneState extends State<BlockyScene> {
       tolerance: GameConfig.perfectPlacementTolerance,
     );
     if (!isPerfect) {
-      _createFallingPiece(
+      final cutPosition = _fallingPieceManager.createCutPiece(
         movesOnX: movesOnX,
         current: current,
         overlap: overlap,
-        position: position,
+        blockPosition: position,
+        towerWidth: _towerWidth,
+        towerDepth: _towerDepth,
+        colorIndex: _movingBlockColorIndex,
+        material: _movingBlockMaterial,
       );
+      if (cutPosition != null) {
+        _feedbackController.playCutParticles(
+          cutPosition,
+          colorIndex: _movingBlockColorIndex,
+        );
+      }
       widget.soundPlayer.play(_blockThemeVisual.sounds.cut);
     }
 
@@ -585,8 +392,8 @@ class _BlockySceneState extends State<BlockyScene> {
       _towerCenterZ,
     );
     if (!isPerfect) {
-      _updateBlockGeometry(
-        _movingBlock,
+      _blockFactory.updateBlock(
+        block: _movingBlock,
         width: _towerWidth,
         depth: _towerDepth,
         colorIndex: _movingBlockColorIndex,
@@ -599,13 +406,22 @@ class _BlockySceneState extends State<BlockyScene> {
           _applyPerfectRecovery();
       if (recovered) {
         widget.gameController.completePerfectRecovery();
-        _createPerfectParticleEffect(_movingBlock.position, isRecovery: true);
+        _feedbackController.playPerfectParticles(
+          _movingBlock.position,
+          colorIndex: _movingBlockColorIndex,
+          isRecovery: true,
+        );
       } else {
-        _playPlacementImpact(_movingBlock);
+        _feedbackController.playPlacementImpact(_movingBlock);
       }
       if (isPerfect) {
-        _createPerfectLightPulse(_movingBlock);
-        _playPerfectWobble(_movingBlock);
+        _feedbackController.playPerfectLightPulse(
+          _movingBlock,
+          width: _towerWidth,
+          depth: _towerDepth,
+          colorIndex: _movingBlockColorIndex,
+        );
+        _feedbackController.playPerfectWobble(_movingBlock);
       }
       GameHaptics.trigger(
         recovered
@@ -621,7 +437,11 @@ class _BlockySceneState extends State<BlockyScene> {
             ? _blockThemeVisual.sounds.perfect
             : _blockThemeVisual.sounds.placement,
       );
-      _addTowerCollider(_movingBlock, width: _towerWidth, depth: _towerDepth);
+      _blockFactory.addTowerCollider(
+        _movingBlock,
+        width: _towerWidth,
+        depth: _towerDepth,
+      );
       _createMovingBlock();
     }
   }
@@ -653,498 +473,19 @@ class _BlockySceneState extends State<BlockyScene> {
         : _towerDepth;
     if (recoveredLength == previousLength) return false;
 
-    _updateBlockGeometry(
-      _movingBlock,
+    _blockFactory.updateBlock(
+      block: _movingBlock,
       width: _towerWidth,
       depth: _towerDepth,
       colorIndex: _movingBlockColorIndex,
       material: _movingBlockMaterial,
     );
-    _playPerfectRecoveryGrowth(
+    _feedbackController.playRecoveryGrowth(
       _movingBlock,
       axis: axis,
       initialScale: previousLength / recoveredLength,
     );
     return true;
-  }
-
-  void _createFallingPiece({
-    required bool movesOnX,
-    required BlockAxisRange current,
-    required BlockOverlap overlap,
-    required vm.Vector3 position,
-  }) {
-    final cutRange = calculateCutOffRange(current: current, overlap: overlap);
-    if (cutRange == null) return;
-
-    final width = movesOnX ? cutRange.length : _towerWidth;
-    final depth = movesOnX ? _towerDepth : cutRange.length;
-    _createCutParticleEffect(
-      movesOnX
-          ? vm.Vector3(cutRange.center, position.y, position.z)
-          : vm.Vector3(position.x, position.y, cutRange.center),
-    );
-    final movesTowardsPositiveAxis = cutRange.center > overlap.center;
-    final outwardDirection = movesTowardsPositiveAxis ? 1.0 : -1.0;
-    final linearVelocity = movesOnX
-        ? vm.Vector3(
-            outwardDirection * GameConfig.fallingPieceOutwardSpeed,
-            0,
-            0,
-          )
-        : vm.Vector3(
-            0,
-            0,
-            outwardDirection * GameConfig.fallingPieceOutwardSpeed,
-          );
-    final angularVelocity = movesOnX
-        ? vm.Vector3(
-            0,
-            0,
-            outwardDirection * GameConfig.fallingPieceAngularSpeed,
-          )
-        : vm.Vector3(
-            outwardDirection * GameConfig.fallingPieceAngularSpeed,
-            0,
-            0,
-          );
-    final piece =
-        _createBlockNode(
-            width: width,
-            depth: depth,
-            colorIndex: _movingBlockColorIndex,
-            material: _movingBlockMaterial,
-          )
-          ..position = movesOnX
-              ? vm.Vector3(cutRange.center, position.y, position.z)
-              : vm.Vector3(position.x, position.y, cutRange.center)
-          ..addComponent(
-            RigidBody(
-              mass: GameConfig.fallingPieceMass,
-              linearVelocity: linearVelocity,
-              angularVelocity: angularVelocity,
-            ),
-          )
-          // As sobras colidem com a torre, mas não entre si: isso mantém o
-          // efeito convincente sem deixar objetos fora da tela se acumularem.
-          ..addComponent(
-            Collider(
-              shape: BoxShape(
-                halfExtents: vm.Vector3(
-                  width / 2,
-                  GameConfig.blockHeight / 2,
-                  depth / 2,
-                ),
-              ),
-              collisionLayer: _fallingPieceCollisionLayer,
-              collisionMask: _towerCollisionLayer,
-            ),
-          );
-
-    _scene.add(piece);
-    _fallingPieces.add(SceneFallingPiece(piece));
-  }
-
-  void _removeFallenPieces() {
-    final removalY = _towerTopY - GameConfig.fallingPieceCleanupDistance;
-    var removedPiece = false;
-    _fallingPieces.removeWhere((piece) {
-      if (piece.node.position.y > removalY) return false;
-
-      _scene.remove(piece.node);
-      _topFaceShades.remove(piece.node);
-      _themeSceneRenderer.forget(piece.node);
-      removedPiece = true;
-      return true;
-    });
-
-    if (removedPiece && mounted) setState(() {});
-  }
-
-  void _updateFallingPieceVisuals(double deltaSeconds) {
-    final fallingVisual = _blockThemeVisual.fallingVisual;
-    if (fallingVisual.wobbleAmplitude == 0.0) return;
-
-    for (final piece in _fallingPieces) {
-      piece.elapsedSeconds += deltaSeconds;
-      final wobble = math.sin(
-        piece.elapsedSeconds * fallingVisual.wobbleFrequency,
-      );
-      piece.node.scale = vm.Vector3(
-        1.0 + fallingVisual.wobbleAmplitude * wobble,
-        1.0 - fallingVisual.wobbleAmplitude * 1.4 * wobble,
-        1.0 + fallingVisual.wobbleAmplitude * wobble,
-      );
-    }
-  }
-
-  void _createPerfectParticleEffect(
-    vm.Vector3 position, {
-    bool isRecovery = false,
-  }) {
-    final particles = isRecovery
-        ? _blockThemeVisual.perfectRecoveryParticles
-        : _blockThemeVisual.perfectParticles;
-    _createTransientParticleEffect(
-      position: position,
-      particles: particles,
-      color: _linearBlockColor(_movingBlockColorIndex, alpha: 0.9),
-    );
-  }
-
-  void _createPerfectLightPulse(Node block) {
-    final color = _linearBlockColor(_movingBlockColorIndex);
-    final material = PhysicallyBasedMaterial()
-      ..baseColorFactor = vm.Vector4(color.x, color.y, color.z, 0.0)
-      ..emissiveFactor = vm.Vector4(color.x, color.y, color.z, 1.0)
-      ..emissiveStrength = GameConfig.perfectLightPulseEmissiveStrength
-      ..metallicFactor = 0.0
-      ..roughnessFactor = 1.0
-      ..alphaMode = AlphaMode.blend;
-    final pulse =
-        Node(
-            mesh: Mesh(
-              CuboidGeometry(
-                vm.Vector3(
-                  _towerWidth,
-                  GameConfig.perfectLightPulseHeight,
-                  _towerDepth,
-                ),
-              ),
-              material,
-            ),
-          )
-          ..position = vm.Vector3(
-            block.position.x,
-            block.position.y -
-                GameConfig.blockHeight / 2 -
-                GameConfig.blockGap / 2,
-            block.position.z,
-          )
-          ..scale = vm.Vector3(
-            GameConfig.perfectLightPulseInitialScale,
-            1.0,
-            GameConfig.perfectLightPulseInitialScale,
-          )
-          ..castsShadows = false;
-
-    _scene.add(pulse);
-    _perfectLightPulses.add(
-      ScenePerfectLightPulse(node: pulse, material: material, color: color),
-    );
-  }
-
-  void _updatePerfectLightPulses(double deltaSeconds) {
-    if (_perfectLightPulses.isEmpty) return;
-
-    final duration =
-        GameConfig.perfectLightPulseDuration.inMicroseconds /
-        Duration.microsecondsPerSecond;
-    var completedEffect = false;
-    _perfectLightPulses.removeWhere((pulse) {
-      pulse.elapsedSeconds += deltaSeconds;
-      final progress = (pulse.elapsedSeconds / duration)
-          .clamp(0.0, 1.0)
-          .toDouble();
-      final scale =
-          GameConfig.perfectLightPulseInitialScale +
-          (GameConfig.perfectLightPulseFinalScale -
-                  GameConfig.perfectLightPulseInitialScale) *
-              (1.0 - math.pow(1.0 - progress, 3.0).toDouble());
-      final opacity =
-          GameConfig.perfectLightPulseOpacity *
-          math.pow(1.0 - progress, 1.7).toDouble();
-
-      pulse.node.scale = vm.Vector3(scale, 1.0, scale);
-      pulse.material.baseColorFactor = vm.Vector4(
-        pulse.color.x,
-        pulse.color.y,
-        pulse.color.z,
-        opacity,
-      );
-
-      if (progress < 1.0) return false;
-
-      _scene.remove(pulse.node);
-      completedEffect = true;
-      return true;
-    });
-
-    if (completedEffect && mounted) setState(() {});
-  }
-
-  void _createCutParticleEffect(vm.Vector3 position) {
-    final particles = _blockThemeVisual.cutParticles;
-    if (particles == null) return;
-
-    _createTransientParticleEffect(
-      position: position,
-      particles: particles,
-      color: _linearBlockColor(_movingBlockColorIndex, alpha: 0.95),
-    );
-  }
-
-  void _createTransientParticleEffect({
-    required vm.Vector3 position,
-    required BlockParticleVisual particles,
-    required vm.Vector4 color,
-  }) {
-    final transparentColor = vm.Vector4(color.x, color.y, color.z, 0.0);
-    final system = ParticleSystem(
-      maxParticles: particles.count,
-      shape: SphereEmitterShape(
-        radius: particles.emitterRadius,
-        surfaceOnly: true,
-        hemisphere: true,
-      ),
-      spawner: Spawner(
-        bursts: [ParticleBurst(time: 0.0, count: particles.count)],
-      ),
-      lifetime: ConstantFloat(particles.lifetime),
-      startSpeed: UniformFloat(particles.minimumSpeed, particles.maximumSpeed),
-      startSize: UniformFloat(particles.minimumSize, particles.maximumSize),
-      startColor: ConstantColor(color),
-      gravity: vm.Vector3(0.0, -particles.gravity, 0.0),
-      looping: false,
-      duration: 0.01,
-      modules: [
-        SizeOverLifeModule(
-          CurveFloat(ParticleCurve.linear(from: 1.0, to: 0.2)),
-        ),
-        ColorOverLifeModule(
-          GradientColor(
-            ColorGradient([
-              ColorStop(0.0, color),
-              ColorStop(1.0, transparentColor),
-            ]),
-          ),
-        ),
-      ],
-    );
-    final effectNode = Node()
-      ..position = vm.Vector3(
-        position.x,
-        position.y + GameConfig.blockHeight / 2,
-        position.z,
-      )
-      ..addComponent(ParticleEmitterComponent(system: system));
-
-    _scene.add(effectNode);
-    _transientParticleEffects.add(
-      SceneTransientParticleEffect(
-        effectNode,
-        particles.effectDuration.inMicroseconds /
-            Duration.microsecondsPerSecond,
-      ),
-    );
-  }
-
-  void _removeExpiredTransientParticleEffects(double deltaSeconds) {
-    var removedEffect = false;
-    _transientParticleEffects.removeWhere((effect) {
-      effect.remainingSeconds -= deltaSeconds;
-      if (effect.remainingSeconds > 0.0) return false;
-
-      _scene.remove(effect.node);
-      removedEffect = true;
-      return true;
-    });
-
-    if (removedEffect && mounted) setState(() {});
-  }
-
-  void _playPerfectWobble(Node block) {
-    final wobble = _blockThemeVisual.perfectWobble;
-    if (wobble.duration == Duration.zero) return;
-
-    _perfectWobbles.add(
-      ScenePerfectWobble(
-        node: block,
-        basePosition: block.position,
-        baseRotation: block.rotation,
-      ),
-    );
-  }
-
-  void _updatePerfectWobbles(double deltaSeconds) {
-    final visual = _blockThemeVisual.perfectWobble;
-    if (_perfectWobbles.isEmpty) return;
-
-    final duration =
-        visual.duration.inMicroseconds / Duration.microsecondsPerSecond;
-    var completedEffect = false;
-    _perfectWobbles.removeWhere((effect) {
-      effect.elapsedSeconds += deltaSeconds;
-      final progress = (effect.elapsedSeconds / duration)
-          .clamp(0.0, 1.0)
-          .toDouble();
-      final envelope = math.sin(math.pi * progress) * (1.0 - progress);
-      final phase = progress * math.pi * 5.0;
-      final translation = visual.translationAmplitude * envelope;
-      final rotation = visual.rotationAmplitude * envelope;
-
-      effect.node.position =
-          effect.basePosition +
-          vm.Vector3(
-            math.sin(phase * 1.1) * translation,
-            math.sin(phase * 1.7) * translation * 0.28,
-            math.sin(phase * 0.85) * translation * 0.85,
-          );
-      effect.node.rotation =
-          effect.baseRotation *
-          vm.Quaternion.euler(
-            math.sin(phase * 0.9) * rotation,
-            math.sin(phase * 1.3) * rotation * 0.72,
-            math.sin(phase * 1.6) * rotation * 0.62,
-          );
-
-      if (progress < 1.0) return false;
-
-      effect.node.position = effect.basePosition;
-      effect.node.rotation = effect.baseRotation;
-      completedEffect = true;
-      return true;
-    });
-
-    if (completedEffect && mounted) setState(() {});
-  }
-
-  void _playPlacementImpact(Node block) {
-    _impactBlock = block;
-    _impactElapsedSeconds = 0.0;
-    block.scale = vm.Vector3.all(1.0);
-  }
-
-  void _updatePlacementImpact(double deltaSeconds) {
-    final block = _impactBlock;
-    if (block == null) return;
-
-    _impactElapsedSeconds += deltaSeconds;
-    final impact = _blockThemeVisual.placementImpact;
-    final duration =
-        impact.duration.inMicroseconds / Duration.microsecondsPerSecond;
-    final progress = (_impactElapsedSeconds / duration)
-        .clamp(0.0, 1.0)
-        .toDouble();
-    block.scale = _impactScale(impact, progress);
-
-    if (progress == 1.0) {
-      block.scale = vm.Vector3.all(1.0);
-      _impactBlock = null;
-    }
-  }
-
-  vm.Vector3 _impactScale(BlockImpactVisual impact, double progress) {
-    return switch (impact.motion) {
-      BlockImpactMotion.standard => _standardImpactScale(impact, progress),
-      BlockImpactMotion.squashAndStretch => _jellyImpactScale(impact, progress),
-      BlockImpactMotion.firmSettle => _firmSettleImpactScale(impact, progress),
-    };
-  }
-
-  vm.Vector3 _standardImpactScale(BlockImpactVisual impact, double progress) {
-    final intensity = math.sin(math.pi * progress);
-    return vm.Vector3(
-      1.0 + impact.horizontalScale * intensity,
-      1.0 - impact.verticalScale * intensity,
-      1.0 + impact.horizontalScale * intensity,
-    );
-  }
-
-  vm.Vector3 _jellyImpactScale(BlockImpactVisual impact, double progress) {
-    const squashPortion = 0.42;
-    if (progress < squashPortion) {
-      final squashProgress = progress / squashPortion;
-      final intensity = math.sin(math.pi / 2 * squashProgress);
-      return vm.Vector3(
-        1.0 + impact.horizontalScale * intensity,
-        1.0 - impact.verticalScale * intensity,
-        1.0 + impact.horizontalScale * intensity,
-      );
-    }
-
-    final reboundProgress = ((progress - squashPortion) / (1 - squashPortion))
-        .clamp(0.0, 1.0)
-        .toDouble();
-    final intensity = math.sin(math.pi * reboundProgress);
-    return vm.Vector3(
-      1.0 - impact.reboundHorizontalScale * intensity,
-      1.0 + impact.reboundVerticalScale * intensity,
-      1.0 - impact.reboundHorizontalScale * intensity,
-    );
-  }
-
-  vm.Vector3 _firmSettleImpactScale(BlockImpactVisual impact, double progress) {
-    const compressionPortion = 0.6;
-    if (progress < compressionPortion) {
-      final compressionProgress = progress / compressionPortion;
-      final intensity = math.sin(math.pi / 2 * compressionProgress);
-      return vm.Vector3(
-        1.0 + impact.horizontalScale * intensity,
-        1.0 - impact.verticalScale * intensity,
-        1.0 + impact.horizontalScale * intensity,
-      );
-    }
-
-    final reboundProgress =
-        ((progress - compressionPortion) / (1.0 - compressionPortion))
-            .clamp(0.0, 1.0)
-            .toDouble();
-    final intensity = math.sin(math.pi * reboundProgress);
-    return vm.Vector3(
-      1.0 - impact.reboundHorizontalScale * intensity,
-      1.0 + impact.reboundVerticalScale * intensity,
-      1.0 - impact.reboundHorizontalScale * intensity,
-    );
-  }
-
-  void _playPerfectRecoveryGrowth(
-    Node block, {
-    required MovingBlockAxis axis,
-    required double initialScale,
-  }) {
-    _recoveryBlock = block;
-    _recoveryAxis = axis;
-    _recoveryInitialScale = initialScale;
-    _recoveryElapsedSeconds = 0.0;
-    _setRecoveryScale(block, initialScale);
-  }
-
-  void _updatePerfectRecoveryGrowth(double deltaSeconds) {
-    final block = _recoveryBlock;
-    final axis = _recoveryAxis;
-    if (block == null || axis == null) return;
-
-    _recoveryElapsedSeconds += deltaSeconds;
-    final duration =
-        GameConfig.perfectRecoveryAnimationDuration.inMicroseconds /
-        Duration.microsecondsPerSecond;
-    final progress = (_recoveryElapsedSeconds / duration)
-        .clamp(0.0, 1.0)
-        .toDouble();
-    final easedProgress = 1.0 - math.pow(1.0 - progress, 3.0).toDouble();
-    final recoveryProgress =
-        easedProgress +
-        _blockThemeVisual.recoveryGrowthOvershoot *
-            math.sin(math.pi * progress);
-    final scale =
-        _recoveryInitialScale +
-        (1.0 - _recoveryInitialScale) * recoveryProgress;
-    _setRecoveryScale(block, scale);
-
-    if (progress == 1.0) {
-      block.scale = vm.Vector3.all(1.0);
-      _recoveryBlock = null;
-      _recoveryAxis = null;
-    }
-  }
-
-  void _setRecoveryScale(Node block, double scale) {
-    block.scale = switch (_recoveryAxis) {
-      MovingBlockAxis.x => vm.Vector3(scale, 1.0, 1.0),
-      MovingBlockAxis.z => vm.Vector3(1.0, 1.0, scale),
-      null => vm.Vector3.all(1.0),
-    };
   }
 
   double _movementLimit(Size viewport) {
@@ -1253,13 +594,9 @@ class _BlockySceneState extends State<BlockyScene> {
         return TickerMode(
           enabled:
               widget.gameController.isMoving ||
-              _fallingPieces.isNotEmpty ||
-              _impactBlock != null ||
-              _recoveryBlock != null ||
-              _gameOverCameraReveal.isActive ||
-              _perfectWobbles.isNotEmpty ||
-              _perfectLightPulses.isNotEmpty ||
-              _transientParticleEffects.isNotEmpty,
+              _fallingPieceManager.hasActivePieces ||
+              _feedbackController.isActive ||
+              _gameOverCameraReveal.isActive,
           child: SceneView(
             _scene,
             camera: _camera,
@@ -1272,13 +609,14 @@ class _BlockySceneState extends State<BlockyScene> {
               }
               _updateGameOverCameraReveal(deltaSeconds);
               _updateBackgroundStars(deltaSeconds);
-              _updatePlacementImpact(deltaSeconds);
-              _updatePerfectRecoveryGrowth(deltaSeconds);
-              _updatePerfectWobbles(deltaSeconds);
-              _updatePerfectLightPulses(deltaSeconds);
-              _updateFallingPieceVisuals(deltaSeconds);
-              _removeFallenPieces();
-              _removeExpiredTransientParticleEffects(deltaSeconds);
+              final feedbackFinished = _feedbackController.update(deltaSeconds);
+              final fallingPiecesChanged = _fallingPieceManager.update(
+                deltaSeconds,
+                towerTopY: _towerTopY,
+              );
+              if ((feedbackFinished || fallingPiecesChanged) && mounted) {
+                setState(() {});
+              }
             },
           ),
         );

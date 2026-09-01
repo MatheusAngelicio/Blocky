@@ -4,9 +4,10 @@ import 'dart:math' as math;
 import 'package:blocky/game/blocky_coin_storage.dart';
 import 'package:blocky/game/best_score_storage.dart';
 import 'package:blocky/game/game_config.dart';
+import 'package:blocky/game/moving_block_axis.dart';
 import 'package:flutter/foundation.dart';
 
-enum MovingBlockAxis { x, z }
+export 'package:blocky/game/moving_block_axis.dart';
 
 enum GameStatus { playing, gameOverPreview, gameOver }
 

@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_config.dart';
+import 'package:blocky/game/moving_block_axis.dart';
 import 'package:blocky/scene/block_theme_visual.dart';
 import 'package:blocky/scene/scene_effect_models.dart';
 import 'package:flutter_scene/scene.dart';

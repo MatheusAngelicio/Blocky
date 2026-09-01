@@ -1,8 +1,7 @@
 import 'dart:math' as math;
-
 import 'package:blocky/game/block_theme.dart';
 import 'package:blocky/game/game_haptics.dart';
-import 'package:blocky/game/block_overlap.dart';
+import 'package:blocky/game/block_tower.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_config.dart';
 import 'package:blocky/game/game_sound.dart';
@@ -43,6 +42,7 @@ class _BlockySceneState extends State<BlockyScene> {
   static const _initialCameraTargetY = 1.55;
 
   final Scene _scene = Scene();
+  final BlockTower _tower = BlockTower();
   late final BlockThemeVisual _blockThemeVisual;
   late final SceneBlockFactory _blockFactory;
   late final SceneFallingPieceManager _fallingPieceManager;
@@ -72,12 +72,6 @@ class _BlockySceneState extends State<BlockyScene> {
   final SceneGameOverCameraReveal _gameOverCameraReveal =
       SceneGameOverCameraReveal();
   double _movingDirection = 1.0;
-  double _towerCenterX = 0.0;
-  double _towerCenterZ = 0.0;
-  double _towerTopY = 0.0;
-  double _towerWidth = GameConfig.blockWidth;
-  double _towerDepth = GameConfig.blockDepth;
-  MovingBlockAxis? _lastReducedAxis;
   final math.Random _random = math.Random();
   late double _initialBlockHue;
   int _nextBlockColorIndex = 0;
@@ -207,12 +201,7 @@ class _BlockySceneState extends State<BlockyScene> {
     _hasResolvedPlacement = false;
     _gameOverCameraReveal.reset();
     _movingDirection = 1.0;
-    _towerCenterX = 0.0;
-    _towerCenterZ = 0.0;
-    _towerTopY = 0.0;
-    _towerWidth = GameConfig.blockWidth;
-    _towerDepth = GameConfig.blockDepth;
-    _lastReducedAxis = null;
+    _tower.reset();
     _initialBlockHue = _random.nextDouble() * 360.0;
     _skyVariation = SkyProgression.randomVariation(_random);
     _nextBlockColorIndex = 0;
@@ -309,15 +298,15 @@ class _BlockySceneState extends State<BlockyScene> {
     );
     _movingBlock =
         _blockFactory.createBlock(
-            width: _towerWidth,
-            depth: _towerDepth,
+            width: _tower.width,
+            depth: _tower.depth,
             colorIndex: _movingBlockColorIndex,
             material: _movingBlockMaterial,
           )
           ..position = vm.Vector3(
-            _towerCenterX,
-            _towerTopY + GameConfig.blockVerticalStep,
-            _towerCenterZ,
+            _tower.centerX,
+            _tower.topY + GameConfig.blockVerticalStep,
+            _tower.centerZ,
           );
     _scene.add(_movingBlock);
   }
@@ -327,18 +316,14 @@ class _BlockySceneState extends State<BlockyScene> {
 
     _hasResolvedPlacement = true;
     final position = _movingBlock.position;
-    final movesOnX = widget.gameController.movingAxis == MovingBlockAxis.x;
-    final below = BlockAxisRange(
-      center: movesOnX ? _towerCenterX : _towerCenterZ,
-      length: movesOnX ? _towerWidth : _towerDepth,
+    final movingAxis = widget.gameController.movingAxis;
+    final placement = _tower.place(
+      axis: movingAxis,
+      currentCenter: movingAxis == MovingBlockAxis.x ? position.x : position.z,
+      blockY: position.y,
     );
-    final current = BlockAxisRange(
-      center: movesOnX ? position.x : position.z,
-      length: movesOnX ? _towerWidth : _towerDepth,
-    );
-    final overlap = calculateBlockOverlap(below: below, current: current);
 
-    if (!overlap.hasOverlap) {
+    if (!placement.hasOverlap) {
       _movingBlock.visible = false;
       widget.gameController.endGame();
       GameHaptics.trigger(GameHapticEvent.gameOver);
@@ -346,61 +331,35 @@ class _BlockySceneState extends State<BlockyScene> {
       return;
     }
 
-    final isPerfect = isPerfectBlockPlacement(
-      below: below,
-      current: current,
-      tolerance: GameConfig.perfectPlacementTolerance,
-    );
-    if (!isPerfect) {
+    if (placement.wasCut) {
       final cutPosition = _fallingPieceManager.createCutPiece(
-        movesOnX: movesOnX,
-        current: current,
-        overlap: overlap,
+        cutOff: placement.cutOff!,
         blockPosition: position,
-        towerWidth: _towerWidth,
-        towerDepth: _towerDepth,
         colorIndex: _movingBlockColorIndex,
         material: _movingBlockMaterial,
       );
-      if (cutPosition != null) {
-        _feedbackController.playCutParticles(
-          cutPosition,
-          colorIndex: _movingBlockColorIndex,
-        );
-      }
+      _feedbackController.playCutParticles(
+        cutPosition,
+        colorIndex: _movingBlockColorIndex,
+      );
       widget.soundPlayer.play(_blockThemeVisual.sounds.cut);
     }
 
-    if (isPerfect && movesOnX) {
-      _towerCenterX = below.center;
-    } else if (isPerfect) {
-      _towerCenterZ = below.center;
-    } else if (movesOnX) {
-      _towerCenterX = overlap.center;
-      _towerWidth = overlap.length;
-      _lastReducedAxis = MovingBlockAxis.x;
-    } else {
-      _towerCenterZ = overlap.center;
-      _towerDepth = overlap.length;
-      _lastReducedAxis = MovingBlockAxis.z;
-    }
-    _towerTopY = position.y;
-
     _movingBlock.position = vm.Vector3(
-      _towerCenterX,
-      _towerTopY,
-      _towerCenterZ,
+      _tower.centerX,
+      _tower.topY,
+      _tower.centerZ,
     );
-    if (!isPerfect) {
+    if (placement.wasCut) {
       _blockFactory.updateBlock(
         block: _movingBlock,
-        width: _towerWidth,
-        depth: _towerDepth,
+        width: _tower.width,
+        depth: _tower.depth,
         colorIndex: _movingBlockColorIndex,
         material: _movingBlockMaterial,
       );
     }
-    if (widget.gameController.startNextBlock(isPerfect: isPerfect)) {
+    if (widget.gameController.startNextBlock(isPerfect: placement.isPerfect)) {
       final recovered =
           widget.gameController.isPerfectRecoveryReady &&
           _applyPerfectRecovery();
@@ -414,11 +373,11 @@ class _BlockySceneState extends State<BlockyScene> {
       } else {
         _feedbackController.playPlacementImpact(_movingBlock);
       }
-      if (isPerfect) {
+      if (placement.isPerfect) {
         _feedbackController.playPerfectLightPulse(
           _movingBlock,
-          width: _towerWidth,
-          depth: _towerDepth,
+          width: _tower.width,
+          depth: _tower.depth,
           colorIndex: _movingBlockColorIndex,
         );
         _feedbackController.playPerfectWobble(_movingBlock);
@@ -426,64 +385,41 @@ class _BlockySceneState extends State<BlockyScene> {
       GameHaptics.trigger(
         recovered
             ? GameHapticEvent.perfectRecovery
-            : isPerfect
+            : placement.isPerfect
             ? GameHapticEvent.perfect
             : GameHapticEvent.placement,
       );
       widget.soundPlayer.play(
         recovered
             ? _blockThemeVisual.sounds.perfectRecovery
-            : isPerfect
+            : placement.isPerfect
             ? _blockThemeVisual.sounds.perfect
             : _blockThemeVisual.sounds.placement,
       );
       _blockFactory.addTowerCollider(
         _movingBlock,
-        width: _towerWidth,
-        depth: _towerDepth,
+        width: _tower.width,
+        depth: _tower.depth,
       );
       _createMovingBlock();
     }
   }
 
   bool _applyPerfectRecovery() {
-    final axis = _lastReducedAxis;
-    if (axis == null) return false;
-
-    final previousLength = axis == MovingBlockAxis.x
-        ? _towerWidth
-        : _towerDepth;
-    switch (_lastReducedAxis) {
-      case MovingBlockAxis.x:
-        _towerWidth = GameConfig.recoverBlockLength(
-          currentLength: _towerWidth,
-          maximumLength: GameConfig.blockWidth,
-        );
-      case MovingBlockAxis.z:
-        _towerDepth = GameConfig.recoverBlockLength(
-          currentLength: _towerDepth,
-          maximumLength: GameConfig.blockDepth,
-        );
-      case null:
-        return false;
-    }
-
-    final recoveredLength = axis == MovingBlockAxis.x
-        ? _towerWidth
-        : _towerDepth;
-    if (recoveredLength == previousLength) return false;
+    final recovery = _tower.recoverLastReducedAxis();
+    if (recovery == null) return false;
 
     _blockFactory.updateBlock(
       block: _movingBlock,
-      width: _towerWidth,
-      depth: _towerDepth,
+      width: _tower.width,
+      depth: _tower.depth,
       colorIndex: _movingBlockColorIndex,
       material: _movingBlockMaterial,
     );
     _feedbackController.playRecoveryGrowth(
       _movingBlock,
-      axis: axis,
-      initialScale: previousLength / recoveredLength,
+      axis: recovery.axis,
+      initialScale: recovery.initialVisualScale,
     );
     return true;
   }
@@ -496,12 +432,9 @@ class _BlockySceneState extends State<BlockyScene> {
       math.tan(_camera.fovRadiansY / 2) * viewport.aspectRatio,
     );
     final visibleHalfWidth = depth * math.tan(halfFovX);
-    final movingLength = widget.gameController.movingAxis == MovingBlockAxis.x
-        ? _towerWidth
-        : _towerDepth;
-    final originalLength = widget.gameController.movingAxis == MovingBlockAxis.x
-        ? GameConfig.blockWidth
-        : GameConfig.blockDepth;
+    final movingAxis = widget.gameController.movingAxis;
+    final movingLength = _tower.lengthFor(movingAxis);
+    final originalLength = _tower.maximumLengthFor(movingAxis);
     final travelScale = GameConfig.movingBlockTravelScale(
       currentLength: movingLength,
       originalLength: originalLength,
@@ -520,9 +453,10 @@ class _BlockySceneState extends State<BlockyScene> {
     if (!widget.gameController.isMoving || limit == 0.0) return;
 
     final position = _movingBlock.position;
-    final movesOnX = widget.gameController.movingAxis == MovingBlockAxis.x;
+    final movingAxis = widget.gameController.movingAxis;
+    final movesOnX = movingAxis == MovingBlockAxis.x;
     final currentCoordinate = movesOnX ? position.x : position.z;
-    final movementCenter = movesOnX ? _towerCenterX : _towerCenterZ;
+    final movementCenter = _tower.centerFor(movingAxis);
     final speed = widget.gameController.movingBlockSpeed;
     final nextCoordinate =
         currentCoordinate + _movingDirection * speed * deltaSeconds;
@@ -544,9 +478,9 @@ class _BlockySceneState extends State<BlockyScene> {
     _gameOverCameraReveal.start(
       camera: _camera,
       viewportSize: _viewportSize,
-      towerCenterX: _towerCenterX,
-      towerCenterZ: _towerCenterZ,
-      towerTopY: _towerTopY,
+      towerCenterX: _tower.centerX,
+      towerCenterZ: _tower.centerZ,
+      towerTopY: _tower.topY,
     );
   }
 
@@ -561,12 +495,12 @@ class _BlockySceneState extends State<BlockyScene> {
         1 - math.exp(-GameConfig.cameraFollowSpeed * deltaSeconds);
     final horizontalInterpolation =
         1 - math.exp(-GameConfig.cameraHorizontalFollowSpeed * deltaSeconds);
-    final desiredPositionX = _initialCameraPositionX + _towerCenterX;
-    final desiredPositionY = _initialCameraPositionY + _towerTopY;
-    final desiredPositionZ = _initialCameraPositionZ + _towerCenterZ;
-    final desiredTargetX = _towerCenterX;
-    final desiredTargetY = _initialCameraTargetY + _towerTopY;
-    final desiredTargetZ = _towerCenterZ;
+    final desiredPositionX = _initialCameraPositionX + _tower.centerX;
+    final desiredPositionY = _initialCameraPositionY + _tower.topY;
+    final desiredPositionZ = _initialCameraPositionZ + _tower.centerZ;
+    final desiredTargetX = _tower.centerX;
+    final desiredTargetY = _initialCameraTargetY + _tower.topY;
+    final desiredTargetZ = _tower.centerZ;
     final position = _camera.position;
     final target = _camera.target;
 
@@ -612,7 +546,7 @@ class _BlockySceneState extends State<BlockyScene> {
               final feedbackFinished = _feedbackController.update(deltaSeconds);
               final fallingPiecesChanged = _fallingPieceManager.update(
                 deltaSeconds,
-                towerTopY: _towerTopY,
+                towerTopY: _tower.topY,
               );
               if ((feedbackFinished || fallingPiecesChanged) && mounted) {
                 setState(() {});

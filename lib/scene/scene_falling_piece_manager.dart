@@ -1,7 +1,8 @@
 import 'dart:math' as math;
 
-import 'package:blocky/game/block_overlap.dart';
+import 'package:blocky/game/block_placement_result.dart';
 import 'package:blocky/game/game_config.dart';
+import 'package:blocky/game/moving_block_axis.dart';
 import 'package:blocky/scene/block_theme_visual.dart';
 import 'package:blocky/scene/scene_block_factory.dart';
 import 'package:blocky/scene/scene_effect_models.dart';
@@ -27,52 +28,42 @@ class SceneFallingPieceManager {
   bool get hasActivePieces => _pieces.isNotEmpty;
 
   /// Cria a sobra do corte e retorna sua posição para efeitos visuais.
-  vm.Vector3? createCutPiece({
-    required bool movesOnX,
-    required BlockAxisRange current,
-    required BlockOverlap overlap,
+  vm.Vector3 createCutPiece({
+    required BlockCutOff cutOff,
     required vm.Vector3 blockPosition,
-    required double towerWidth,
-    required double towerDepth,
     required int colorIndex,
     required PhysicallyBasedMaterial material,
   }) {
-    final cutRange = calculateCutOffRange(current: current, overlap: overlap);
-    if (cutRange == null) return null;
-
-    final width = movesOnX ? cutRange.length : towerWidth;
-    final depth = movesOnX ? towerDepth : cutRange.length;
+    final movesOnX = cutOff.axis == MovingBlockAxis.x;
     final piecePosition = movesOnX
-        ? vm.Vector3(cutRange.center, blockPosition.y, blockPosition.z)
-        : vm.Vector3(blockPosition.x, blockPosition.y, cutRange.center);
-    final movesTowardsPositiveAxis = cutRange.center > overlap.center;
-    final outwardDirection = movesTowardsPositiveAxis ? 1.0 : -1.0;
+        ? vm.Vector3(cutOff.range.center, blockPosition.y, blockPosition.z)
+        : vm.Vector3(blockPosition.x, blockPosition.y, cutOff.range.center);
     final linearVelocity = movesOnX
         ? vm.Vector3(
-            outwardDirection * GameConfig.fallingPieceOutwardSpeed,
+            cutOff.outwardDirection * GameConfig.fallingPieceOutwardSpeed,
             0.0,
             0.0,
           )
         : vm.Vector3(
             0.0,
             0.0,
-            outwardDirection * GameConfig.fallingPieceOutwardSpeed,
+            cutOff.outwardDirection * GameConfig.fallingPieceOutwardSpeed,
           );
     final angularVelocity = movesOnX
         ? vm.Vector3(
             0.0,
             0.0,
-            outwardDirection * GameConfig.fallingPieceAngularSpeed,
+            cutOff.outwardDirection * GameConfig.fallingPieceAngularSpeed,
           )
         : vm.Vector3(
-            outwardDirection * GameConfig.fallingPieceAngularSpeed,
+            cutOff.outwardDirection * GameConfig.fallingPieceAngularSpeed,
             0.0,
             0.0,
           );
     final piece =
         _blockFactory.createBlock(
-            width: width,
-            depth: depth,
+            width: cutOff.width,
+            depth: cutOff.depth,
             colorIndex: colorIndex,
             material: material,
           )
@@ -88,9 +79,9 @@ class SceneFallingPieceManager {
             Collider(
               shape: BoxShape(
                 halfExtents: vm.Vector3(
-                  width / 2,
+                  cutOff.width / 2,
                   GameConfig.blockHeight / 2,
-                  depth / 2,
+                  cutOff.depth / 2,
                 ),
               ),
               collisionLayer: SceneBlockFactory.fallingPieceCollisionLayer,

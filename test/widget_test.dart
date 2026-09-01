@@ -10,6 +10,8 @@ import 'package:blocky/game/game_haptics.dart';
 import 'package:blocky/game/game_sound.dart';
 import 'package:blocky/scene/block_theme_visual.dart';
 import 'package:blocky/scene/sky_progression.dart';
+import 'package:blocky/app/arcade_colors.dart';
+import 'package:blocky/app/arcade_design_system.dart';
 import 'package:blocky/app/blocky_app.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,6 +27,18 @@ void main() {
     expect(find.text('BEST'), findsOneWidget);
     expect(find.text('PLAY'), findsOneWidget);
     expect(find.text('BLOCK THEME'), findsOneWidget);
+  });
+
+  test('uses the shared pixel arcade design system', () {
+    final theme = ArcadeTheme.dark();
+
+    expect(theme.textTheme.bodyMedium!.fontFamily, ArcadeTypography.fontFamily);
+    expect(ArcadeTypography.logo.fontFamily, ArcadeTypography.fontFamily);
+    expect(theme.scaffoldBackgroundColor, ArcadeColors.canvas);
+    expect(
+      theme.bottomSheetTheme.modalBackgroundColor,
+      ArcadeColors.elevatedSurface,
+    );
   });
 
   test('uses distinct haptic feedback for each gameplay event', () async {

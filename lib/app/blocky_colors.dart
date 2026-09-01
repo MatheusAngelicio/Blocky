@@ -1,31 +1,12 @@
 import 'package:blocky/game/block_theme.dart';
 import 'package:flutter/material.dart';
 
-/// Paleta compartilhada dos widgets Flutter do Blocky.
+/// Cores que pertencem exclusivamente aos blocos e à apresentação do Blocky.
+///
+/// Os tokens compartilhados da coleção ficam em [ArcadeColors].
 abstract final class BlockyColors {
   static const initialSky = Color(0xFF70C88B);
-  static const homeBackgroundTop = Color(0xFF3C2A63);
-  static const homeBackground = Color(0xFF171323);
-  static const primary = Color(0xFFFFD65C);
-  static const secondary = Color(0xFF7CE5A2);
-  static const panelSurface = Color(0xFF282341);
-  static const modalSurface = Color(0xFF211D32);
-  static const frame = Color(0xFF171323);
-  static const shadow = Color(0xFF080611);
-  static const muted = Color(0xFFBDB5D7);
-  static const softText = Color(0xFFCEC5E7);
-  static const panelBorder = Color(0xFF655B84);
-  static const secondaryBorder = Color(0xFF8D82BB);
-  static const perfectBorder = Color(0xFF8EE8C5);
   static const perfectText = Color(0xFFB7F7D5);
-  static const titleShadow = Color(0xFF6E4A1C);
-  static const white = Colors.white;
-  static const black = Colors.black;
-  static const transparent = Colors.transparent;
-  static const scorePanel = Color(0xE8282341);
-  static const gameOverOverlay = Color(0xD6151225);
-  static const translucentShadow = Color(0x99080611);
-  static const disabledButton = Color(0xFF615C72);
 
   static const classicAccent = Color(0xFFFFD65C);
   static const jellyAccent = Color(0xFF8EE8C5);

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:blocky/app/blocky_arcade.dart';
+import 'package:blocky/app/arcade_colors.dart';
+import 'package:blocky/app/arcade_design_system.dart';
 import 'package:blocky/app/blocky_colors.dart';
 import 'package:blocky/game/best_score_storage.dart';
 import 'package:blocky/game/blocky_coin_storage.dart';
@@ -69,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _showThemeSelector() async {
     final selectedTheme = await showModalBottomSheet<BlockTheme>(
       context: context,
-      backgroundColor: BlockyColors.modalSurface,
+      backgroundColor: ArcadeColors.elevatedSurface,
       shape: const RoundedRectangleBorder(),
       builder: (context) => _ThemeSelector(selectedTheme: _selectedTheme),
     );
@@ -84,7 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final themeColor = BlockyColors.themeAccent(_selectedTheme);
 
     return Scaffold(
-      backgroundColor: BlockyColors.homeBackground,
+      backgroundColor: ArcadeColors.canvas,
       body: ArcadeBackdrop(
         child: SafeArea(
           child: Center(
@@ -94,18 +95,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
                 child: Column(
                   children: [
-                    const Text('BLOCKY', style: BlockyTypography.logo),
+                    const Text('BLOCKY', style: ArcadeTypography.logo),
                     const SizedBox(height: 8),
-                    const Text(
-                      'STACK IT UP',
-                      style: TextStyle(
-                        color: BlockyColors.softText,
-                        fontFamily: BlockyTypography.fontFamily,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 2,
-                      ),
-                    ),
+                    const Text('STACK IT UP', style: ArcadeTypography.tagline),
                     const SizedBox(height: 26),
                     Row(
                       children: [
@@ -136,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Text(
                               'CURRENT SET · ${_themeName(_selectedTheme).toUpperCase()}',
-                              style: BlockyTypography.label.copyWith(
+                              style: ArcadeTypography.label.copyWith(
                                 color: themeColor,
                                 fontSize: 12,
                                 letterSpacing: 1.5,
@@ -163,7 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 14),
                     ArcadeButton(
                       label: 'BLOCK THEME',
-                      color: BlockyColors.secondaryBorder,
+                      color: ArcadeColors.strongOutline,
                       onPressed: _showThemeSelector,
                     ),
                   ],
@@ -194,7 +186,7 @@ class _ThemeSelector extends StatelessWidget {
             const Text(
               'CHOOSE BLOCK THEME',
               textAlign: TextAlign.center,
-              style: BlockyTypography.heading,
+              style: ArcadeTypography.heading,
             ),
             const SizedBox(height: 20),
             for (final theme in BlockTheme.values) ...[
@@ -227,7 +219,7 @@ class _ThemeOption extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = BlockyColors.themeAccent(theme);
     return Material(
-      color: selected ? color.withValues(alpha: 0.2) : BlockyColors.transparent,
+      color: selected ? color.withValues(alpha: 0.2) : ArcadeColors.transparent,
       child: InkWell(
         onTap: onTap,
         child: Container(
@@ -246,15 +238,15 @@ class _ThemeOption extends StatelessWidget {
               Expanded(
                 child: Text(
                   _themeName(theme).toUpperCase(),
-                  style: BlockyTypography.button.copyWith(
-                    color: BlockyColors.white,
+                  style: ArcadeTypography.button.copyWith(
+                    color: ArcadeColors.white,
                   ),
                 ),
               ),
               if (selected)
                 Text(
                   'SELECTED',
-                  style: BlockyTypography.label.copyWith(fontSize: 10),
+                  style: ArcadeTypography.label.copyWith(fontSize: 8),
                 ),
             ],
           ),
@@ -404,14 +396,14 @@ void _drawPreviewBlock(
           ..lineTo(x + width * 0.59, y + depth * 0.48)
           ..lineTo(x + width * 0.24, y + depth * 1.18)
           ..close(),
-        Paint()..color = BlockyColors.white.withValues(alpha: 0.13),
+        Paint()..color = ArcadeColors.white.withValues(alpha: 0.13),
       );
     case BlockTheme.jelly:
       canvas.drawLine(
         Offset(x + width * 0.12, y + depth + height * 0.28),
         Offset(x + width * 0.48, y + depth * 1.72 + height * 0.28),
         Paint()
-          ..color = BlockyColors.white.withValues(alpha: 0.23)
+          ..color = ArcadeColors.white.withValues(alpha: 0.23)
           ..strokeWidth = 1.4,
       );
     case BlockTheme.chocolate:
@@ -455,9 +447,9 @@ String _themeName(BlockTheme theme) => switch (theme) {
 };
 
 Color _lighten(Color color, double amount) {
-  return Color.lerp(color, BlockyColors.white, amount)!;
+  return Color.lerp(color, ArcadeColors.white, amount)!;
 }
 
 Color _darken(Color color, double amount) {
-  return Color.lerp(color, BlockyColors.black, amount)!;
+  return Color.lerp(color, ArcadeColors.black, amount)!;
 }

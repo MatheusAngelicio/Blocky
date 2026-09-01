@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:blocky/app/blocky_arcade.dart';
+import 'package:blocky/app/arcade_colors.dart';
+import 'package:blocky/app/arcade_design_system.dart';
 import 'package:blocky/app/blocky_colors.dart';
 import 'package:blocky/audio/asset_game_sound_player.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
@@ -68,12 +69,12 @@ class _GameScreenState extends State<GameScreen> {
                     child: ArcadeStat(
                       label: 'SCORE',
                       value: '${_gameController.score}',
-                      accent: BlockyColors.primary,
+                      accent: ArcadeColors.primary,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 22,
                         vertical: 9,
                       ),
-                      valueStyle: BlockyTypography.value.copyWith(
+                      valueStyle: ArcadeTypography.value.copyWith(
                         letterSpacing: 1.5,
                       ),
                     ),
@@ -91,8 +92,8 @@ class _GameScreenState extends State<GameScreen> {
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 290),
                         child: ArcadePanel(
-                          accent: BlockyColors.perfectBorder,
-                          backgroundColor: BlockyColors.scorePanel,
+                          accent: ArcadeColors.success,
+                          backgroundColor: ArcadeColors.hudSurface,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 14,
                             vertical: 8,
@@ -101,7 +102,7 @@ class _GameScreenState extends State<GameScreen> {
                           child: Text(
                             _gameController.perfectFeedbackText,
                             textAlign: TextAlign.center,
-                            style: BlockyTypography.heading.copyWith(
+                            style: ArcadeTypography.heading.copyWith(
                               color: BlockyColors.perfectText,
                               fontSize: 18,
                               letterSpacing: 1.1,
@@ -116,13 +117,13 @@ class _GameScreenState extends State<GameScreen> {
             if (_gameController.isGameOver)
               Positioned.fill(
                 child: ColoredBox(
-                  color: BlockyColors.gameOverOverlay,
+                  color: ArcadeColors.scrim,
                   child: SafeArea(
                     child: Center(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 28),
                         child: ArcadePanel(
-                          accent: BlockyColors.primary,
+                          accent: ArcadeColors.primary,
                           borderWidth: 3,
                           padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
                           shadowOffset: const Offset(6, 7),
@@ -131,7 +132,7 @@ class _GameScreenState extends State<GameScreen> {
                             children: [
                               Text(
                                 'BLOCKY',
-                                style: BlockyTypography.logo.copyWith(
+                                style: ArcadeTypography.logo.copyWith(
                                   fontSize: 25,
                                   letterSpacing: 3,
                                 ),
@@ -139,7 +140,7 @@ class _GameScreenState extends State<GameScreen> {
                               const SizedBox(height: 12),
                               const Text(
                                 'GAME OVER',
-                                style: BlockyTypography.heading,
+                                style: ArcadeTypography.heading,
                               ),
                               const SizedBox(height: 24),
                               Row(
@@ -150,7 +151,7 @@ class _GameScreenState extends State<GameScreen> {
                                     child: ArcadeStat(
                                       label: 'SCORE',
                                       value: '${_gameController.score}',
-                                      valueStyle: BlockyTypography.value
+                                      valueStyle: ArcadeTypography.value
                                           .copyWith(fontSize: 40),
                                     ),
                                   ),
@@ -160,8 +161,8 @@ class _GameScreenState extends State<GameScreen> {
                                     child: ArcadeStat(
                                       label: 'BEST',
                                       value: '${_gameController.bestScore}',
-                                      accent: BlockyColors.secondaryBorder,
-                                      valueStyle: BlockyTypography.value
+                                      accent: ArcadeColors.strongOutline,
+                                      valueStyle: ArcadeTypography.value
                                           .copyWith(fontSize: 40),
                                     ),
                                   ),
@@ -170,8 +171,8 @@ class _GameScreenState extends State<GameScreen> {
                               const SizedBox(height: 18),
                               Text(
                                 '+ ${_gameController.coinsEarnedThisGame} BLOCKY COINS',
-                                style: BlockyTypography.button.copyWith(
-                                  color: BlockyColors.primary,
+                                style: ArcadeTypography.button.copyWith(
+                                  color: ArcadeColors.primary,
                                   fontSize: 13,
                                   letterSpacing: 1.0,
                                 ),
@@ -184,8 +185,8 @@ class _GameScreenState extends State<GameScreen> {
                               const SizedBox(height: 12),
                               ArcadeButton(
                                 label: 'HOME',
-                                color: BlockyColors.secondaryBorder,
-                                foregroundColor: BlockyColors.frame,
+                                color: ArcadeColors.strongOutline,
+                                foregroundColor: ArcadeColors.ink,
                                 onPressed: () => Navigator.of(context).pop(),
                               ),
                             ],

@@ -30,6 +30,11 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 .fvm/flutter_sdk
 IDEAS.md
+/AGENTS.md
+/docs/LIBRARIES.md
+/docs/GAME_DESIGN.md
+/docs/ARCHITECTURE.md
+/docs/DECISIONS.md
 .pub-cache/
 .pub/
 /build/

@@ -66,6 +66,20 @@ void main() {
     ]);
   });
 
+  test('ignores unavailable haptic feedback', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          throw PlatformException(code: 'unavailable');
+        });
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+
+    GameHaptics.trigger(GameHapticEvent.placement);
+    await Future<void>.delayed(Duration.zero);
+  });
+
   test('declares every required gameplay sound asset', () {
     expect(GameSound.values, [
       GameSound.placement,

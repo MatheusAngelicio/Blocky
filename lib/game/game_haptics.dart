@@ -14,7 +14,16 @@ abstract final class GameHaptics {
       GameHapticEvent.gameOver => HapticFeedback.heavyImpact(),
     };
 
-    // Não bloqueia o ciclo de renderização enquanto o sistema executa o gesto.
-    unawaited(feedback);
+    // A chamada nativa não pode atrasar o ciclo de renderização nem falhar a
+    // partida em plataformas que não oferecem feedback tátil.
+    unawaited(_ignorePlatformFailure(feedback));
+  }
+
+  static Future<void> _ignorePlatformFailure(Future<void> feedback) async {
+    try {
+      await feedback;
+    } catch (_) {
+      // Haptics é um aprimoramento opcional da experiência.
+    }
   }
 }

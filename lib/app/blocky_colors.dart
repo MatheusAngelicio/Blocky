@@ -12,6 +12,7 @@ abstract final class BlockyColors {
   static const jellyAccent = Color(0xFF8EE8C5);
   static const chocolateAccent = Color(0xFFC77A3C);
   static const cheeseAccent = Color(0xFFFFD85A);
+  static const neonAccent = Color(0xFF22E6F5);
 
   static const classicPreviewTower = <Color>[
     Color(0xFFE65C75),
@@ -41,12 +42,20 @@ abstract final class BlockyColors {
     Color(0xFFFFDA67),
     Color(0xFFFFE481),
   ];
+  static const neonPreviewTower = <Color>[
+    Color(0xFF15233D),
+    Color(0xFF1B2948),
+    Color(0xFF26335B),
+    Color(0xFF3A2A62),
+    Color(0xFF4B1E65),
+  ];
 
   static Color themeAccent(BlockTheme theme) => switch (theme) {
     BlockTheme.classic => classicAccent,
     BlockTheme.jelly => jellyAccent,
     BlockTheme.chocolate => chocolateAccent,
     BlockTheme.cheese => cheeseAccent,
+    BlockTheme.neon => neonAccent,
   };
 
   static List<Color> themePreviewTower(BlockTheme theme) => switch (theme) {
@@ -54,5 +63,6 @@ abstract final class BlockyColors {
     BlockTheme.jelly => jellyPreviewTower,
     BlockTheme.chocolate => chocolatePreviewTower,
     BlockTheme.cheese => cheesePreviewTower,
+    BlockTheme.neon => neonPreviewTower,
   };
 }

@@ -29,6 +29,20 @@ class BlockThemeSceneRenderer {
     rings: 8,
   );
   late final CuboidGeometry _unitCube = CuboidGeometry(vm.Vector3.all(1.0));
+  late final PhysicallyBasedMaterial _neonCyanMaterial = _createNeonMaterial(
+    vm.Vector4(0.0, 0.96, 1.0, 1.0),
+  );
+  late final PhysicallyBasedMaterial _neonMagentaMaterial = _createNeonMaterial(
+    vm.Vector4(1.0, 0.06, 0.68, 1.0),
+  );
+  late final List<PhysicallyBasedMaterial> _neonCircuitMaterials = [
+    _createNeonMaterial(vm.Vector4(1.0, 0.17, 0.58, 1.0)),
+    _createNeonMaterial(vm.Vector4(1.0, 0.34, 0.03, 1.0)),
+    _createNeonMaterial(vm.Vector4(1.0, 0.82, 0.06, 1.0)),
+    _createNeonMaterial(vm.Vector4(0.08, 0.94, 0.43, 1.0)),
+    _createNeonMaterial(vm.Vector4(0.0, 0.82, 1.0, 1.0)),
+    _createNeonMaterial(vm.Vector4(0.48, 0.18, 1.0, 1.0)),
+  ];
 
   void updateDetails({
     required Node block,
@@ -71,6 +85,13 @@ class BlockThemeSceneRenderer {
         colorIndex: colorIndex,
       ),
       BlockSurfaceDetail.chocolateSegments => _createChocolateDetails(
+        block: block,
+        width: width,
+        depth: depth,
+        height: height,
+        colorIndex: colorIndex,
+      ),
+      BlockSurfaceDetail.neonStrips => _createNeonDetails(
         block: block,
         width: width,
         depth: depth,
@@ -316,6 +337,122 @@ class BlockThemeSceneRenderer {
     return details;
   }
 
+  List<Node> _createNeonDetails({
+    required Node block,
+    required double width,
+    required double depth,
+    required double height,
+    required int colorIndex,
+  }) {
+    const frameThickness = 0.026;
+    const frameHeight = 0.016;
+    const faceDepth = 0.014;
+    const inset = 0.07;
+    final details = <Node>[];
+    final insetWidth = math.max(0.0, width - inset * 2);
+    final insetDepth = math.max(0.0, depth - inset * 2);
+    final topY = height / 2 + frameHeight / 2 + 0.006;
+    final frontZ = -depth / 2 + inset;
+    final backZ = depth / 2 - inset;
+    final leftX = -width / 2 + inset;
+    final rightX = width / 2 - inset;
+
+    if (insetWidth < 0.2 || insetDepth < 0.2) return details;
+
+    // Moldura rosa contínua no topo: é o principal sinal visual do tema e
+    // permanece legível até em blocos parcialmente cortados.
+    _addCuboidDetail(
+      block,
+      details,
+      material: _neonMagentaMaterial,
+      position: vm.Vector3(0.0, topY, frontZ),
+      scale: vm.Vector3(insetWidth, frameHeight, frameThickness),
+      castsShadows: false,
+    );
+    _addCuboidDetail(
+      block,
+      details,
+      material: _neonMagentaMaterial,
+      position: vm.Vector3(0.0, topY, backZ),
+      scale: vm.Vector3(insetWidth, frameHeight, frameThickness),
+      castsShadows: false,
+    );
+    _addCuboidDetail(
+      block,
+      details,
+      material: _neonMagentaMaterial,
+      position: vm.Vector3(leftX, topY, 0.0),
+      scale: vm.Vector3(frameThickness, frameHeight, insetDepth),
+      castsShadows: false,
+    );
+    _addCuboidDetail(
+      block,
+      details,
+      material: _neonMagentaMaterial,
+      position: vm.Vector3(rightX, topY, 0.0),
+      scale: vm.Vector3(frameThickness, frameHeight, insetDepth),
+      castsShadows: false,
+    );
+
+    // Blocos pequenos conservam somente a moldura. Nos demais, as duas
+    // linhas ciano inferiores e dois segmentos de circuito dão profundidade
+    // sem passar de oito Nodes decorativos por bloco.
+    if (width < 0.72 || depth < 0.72) return details;
+
+    _addCuboidDetail(
+      block,
+      details,
+      material: _neonCyanMaterial,
+      position: vm.Vector3(
+        0.0,
+        -height / 2 + height * 0.18,
+        -depth / 2 - faceDepth / 2 - 0.003,
+      ),
+      scale: vm.Vector3(insetWidth, frameHeight, faceDepth),
+      castsShadows: false,
+    );
+    _addCuboidDetail(
+      block,
+      details,
+      material: _neonCyanMaterial,
+      position: vm.Vector3(
+        -width / 2 - faceDepth / 2 - 0.003,
+        -height / 2 + height * 0.18,
+        0.0,
+      ),
+      scale: vm.Vector3(faceDepth, frameHeight, insetDepth),
+      castsShadows: false,
+    );
+
+    final circuitMaterial =
+        _neonCircuitMaterials[colorIndex % _neonCircuitMaterials.length];
+    _addCuboidDetail(
+      block,
+      details,
+      material: circuitMaterial,
+      position: vm.Vector3(
+        -width * 0.18,
+        height * 0.04,
+        -depth / 2 - faceDepth / 2 - 0.004,
+      ),
+      scale: vm.Vector3(width * 0.25, frameHeight * 0.62, faceDepth),
+      castsShadows: false,
+    );
+    _addCuboidDetail(
+      block,
+      details,
+      material: circuitMaterial,
+      position: vm.Vector3(
+        width * 0.07,
+        height * 0.16,
+        -depth / 2 - faceDepth / 2 - 0.004,
+      ),
+      scale: vm.Vector3(frameThickness * 0.72, height * 0.3, faceDepth),
+      castsShadows: false,
+    );
+    return details;
+  }
+
   void _addCheeseHole(
     Node block,
     List<Node> details, {
@@ -337,11 +474,12 @@ class BlockThemeSceneRenderer {
     required PhysicallyBasedMaterial material,
     required vm.Vector3 position,
     required vm.Vector3 scale,
+    bool castsShadows = true,
   }) {
     final detail = Node(mesh: Mesh(_unitCube, material))
       ..position = position
       ..scale = scale
-      ..castsShadows = true;
+      ..castsShadows = castsShadows;
     block.add(detail);
     details.add(detail);
   }
@@ -556,6 +694,15 @@ class BlockThemeSceneRenderer {
       )
       ..metallicFactor = 0.0
       ..roughnessFactor = 0.6;
+  }
+
+  PhysicallyBasedMaterial _createNeonMaterial(vm.Vector4 color) {
+    return PhysicallyBasedMaterial()
+      ..baseColorFactor = color
+      ..emissiveFactor = color
+      ..emissiveStrength = 2.7
+      ..metallicFactor = 0.1
+      ..roughnessFactor = 0.24;
   }
 }
 

@@ -7,7 +7,7 @@ import 'package:blocky/game/game_sound.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
-enum BlockImpactMotion { standard, squashAndStretch, firmSettle }
+enum BlockImpactMotion { standard, squashAndStretch, firmSettle, neonPulse }
 
 /// Detalhes geométricos leves adicionados sobre o paralelepípedo lógico.
 ///
@@ -19,6 +19,7 @@ enum BlockSurfaceDetail {
   jellyTopHighlight,
   cheeseHoles,
   chocolateSegments,
+  neonStrips,
 }
 
 /// Define uma sequência de cores próxima entre blocos da mesma partida.
@@ -472,6 +473,86 @@ class BlockThemeVisual {
     transmission: 0.0,
   );
 
+  /// Painel grafite polido, moldura rosa, base ciano e trilhas de circuito
+  /// coloridas. O impacto propaga um pulso curto em vez de amassar o bloco.
+  static const neon = BlockThemeVisual(
+    theme: BlockTheme.neon,
+    surfaceDetail: BlockSurfaceDetail.neonStrips,
+    placementImpact: BlockImpactVisual(
+      motion: BlockImpactMotion.neonPulse,
+      duration: Duration(milliseconds: 135),
+      horizontalScale: 0.032,
+      verticalScale: 0.022,
+      reboundHorizontalScale: 0.012,
+      reboundVerticalScale: 0.008,
+    ),
+    perfectParticles: BlockParticleVisual(
+      count: 7,
+      lifetime: 0.36,
+      effectDuration: Duration(milliseconds: 420),
+      emitterRadius: 0.42,
+      minimumSpeed: 0.6,
+      maximumSpeed: 1.15,
+      minimumSize: 0.022,
+      maximumSize: 0.052,
+      gravity: 2.4,
+    ),
+    perfectRecoveryParticles: BlockParticleVisual(
+      count: 13,
+      lifetime: 0.46,
+      effectDuration: Duration(milliseconds: 530),
+      emitterRadius: 0.58,
+      minimumSpeed: 0.8,
+      maximumSpeed: 1.45,
+      minimumSize: 0.028,
+      maximumSize: 0.064,
+      gravity: 2.7,
+    ),
+    cutParticles: BlockParticleVisual(
+      count: 7,
+      lifetime: 0.34,
+      effectDuration: Duration(milliseconds: 400),
+      emitterRadius: 0.08,
+      minimumSpeed: 0.38,
+      maximumSpeed: 0.82,
+      minimumSize: 0.018,
+      maximumSize: 0.04,
+      gravity: 3.8,
+    ),
+    fallingVisual: BlockFallingVisual(
+      wobbleAmplitude: 0.02,
+      wobbleFrequency: 12.0,
+    ),
+    perfectWobble: BlockPerfectWobbleVisual(
+      duration: Duration(milliseconds: 230),
+      translationAmplitude: 0.035,
+      rotationAmplitude: 0.028,
+    ),
+    recoveryGrowthOvershoot: 0.025,
+    sounds: BlockThemeSounds(
+      placement: GameSound.placement,
+      cut: GameSound.cut,
+      perfect: GameSound.perfect,
+      perfectRecovery: GameSound.perfectRecovery,
+      gameOver: GameSound.gameOver,
+    ),
+    colorProgression: BlockColorProgression(
+      hueStep: 17.0,
+      saturation: 0.68,
+      value: 0.3,
+      initialHueStart: 198.0,
+      initialHueRange: 105.0,
+      hueCycleRange: 105.0,
+      saturationVariation: 0.08,
+      valueVariation: 0.08,
+      variationFrequency: 0.9,
+    ),
+    metallicFactor: 0.72,
+    roughnessFactor: 0.22,
+    materialAlpha: 1.0,
+    transmission: 0.0,
+  );
+
   final BlockTheme theme;
   final BlockSurfaceDetail surfaceDetail;
   final BlockImpactVisual placementImpact;
@@ -493,6 +574,7 @@ class BlockThemeVisual {
     BlockTheme.jelly => jelly,
     BlockTheme.chocolate => chocolate,
     BlockTheme.cheese => cheese,
+    BlockTheme.neon => neon,
   };
 
   PhysicallyBasedMaterial createBlockMaterial({

@@ -42,6 +42,7 @@ Antes de definir o novo, compare-o com `BlockThemeVisual` e
 | Jelly | destaque claro macio | squash/stretch elástico |
 | Chocolate | divisões de tablete | assentamento firme |
 | Cheese | furos estáveis em topo e laterais | assentamento firme sutil |
+| Neon | moldura rosa, base ciano e trilhas de circuito em painel grafite | pulso de energia |
 
 O novo tema não pode repetir a mesma combinação. Se usar uma família de
 movimento existente, use parâmetros perceptivelmente diferentes e documente a

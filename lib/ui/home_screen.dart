@@ -70,6 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _showThemeSelector() async {
     final selectedTheme = await showModalBottomSheet<BlockTheme>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: ArcadeColors.elevatedSurface,
       shape: const RoundedRectangleBorder(),
       builder: (context) => _ThemeSelector(selectedTheme: _selectedTheme),
@@ -176,28 +177,38 @@ class _ThemeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'CHOOSE BLOCK THEME',
-              textAlign: TextAlign.center,
-              style: ArcadeTypography.heading,
+    return LayoutBuilder(
+      builder: (context, constraints) => SafeArea(
+        child: SizedBox(
+          height: constraints.maxHeight * 0.78,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'CHOOSE BLOCK THEME',
+                  textAlign: TextAlign.center,
+                  style: ArcadeTypography.heading,
+                ),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: BlockTheme.values.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final theme = BlockTheme.values[index];
+                      return _ThemeOption(
+                        theme: theme,
+                        selected: theme == selectedTheme,
+                        onTap: () => Navigator.of(context).pop(theme),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            for (final theme in BlockTheme.values) ...[
-              _ThemeOption(
-                theme: theme,
-                selected: theme == selectedTheme,
-                onTap: () => Navigator.of(context).pop(theme),
-              ),
-              const SizedBox(height: 10),
-            ],
-          ],
+          ),
         ),
       ),
     );
@@ -436,7 +447,61 @@ void _drawPreviewBlock(
         math.max(1.2, width * 0.028),
         hole,
       );
+    case BlockTheme.neon:
+      final pink = const Color(0xFFFF38B7);
+      final cyan = const Color(0xFF22E6F5);
+      final topEdges = [
+        Offset(x, y + depth),
+        Offset(x + width * 0.5, y),
+        Offset(x + width, y + depth),
+        Offset(x + width * 0.5, y + depth * 2),
+        Offset(x, y + depth),
+      ];
+      _drawNeonPreviewLine(canvas, topEdges, pink, width * 0.028);
+      _drawNeonPreviewLine(
+        canvas,
+        [
+          Offset(x + width * 0.04, y + depth + height * 0.8),
+          Offset(x + width * 0.48, y + depth * 1.75 + height * 0.8),
+        ],
+        cyan,
+        width * 0.024,
+      );
+      _drawNeonPreviewLine(
+        canvas,
+        [
+          Offset(x + width * 0.13, y + depth + height * 0.42),
+          Offset(x + width * 0.29, y + depth * 1.3 + height * 0.42),
+          Offset(x + width * 0.43, y + depth * 1.16 + height * 0.42),
+        ],
+        pink,
+        width * 0.016,
+      );
   }
+}
+
+void _drawNeonPreviewLine(
+  Canvas canvas,
+  List<Offset> points,
+  Color color,
+  double strokeWidth,
+) {
+  final path = Path()..addPolygon(points, false);
+  canvas.drawPath(
+    path,
+    Paint()
+      ..color = color.withValues(alpha: 0.48)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth * 2.8
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, strokeWidth * 1.7),
+  );
+  canvas.drawPath(
+    path,
+    Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(1.0, strokeWidth),
+  );
 }
 
 String _themeName(BlockTheme theme) => switch (theme) {
@@ -444,6 +509,7 @@ String _themeName(BlockTheme theme) => switch (theme) {
   BlockTheme.jelly => 'Jelly',
   BlockTheme.chocolate => 'Chocolate',
   BlockTheme.cheese => 'Cheese',
+  BlockTheme.neon => 'Neon',
 };
 
 Color _lighten(Color color, double amount) {

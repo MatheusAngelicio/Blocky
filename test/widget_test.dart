@@ -96,6 +96,7 @@ void main() {
       BlockTheme.jelly,
       BlockTheme.chocolate,
       BlockTheme.cheese,
+      BlockTheme.neon,
     ]);
     expect(
       BlockThemeVisual.forTheme(BlockTheme.classic),
@@ -112,6 +113,10 @@ void main() {
     expect(
       BlockThemeVisual.forTheme(BlockTheme.cheese),
       same(BlockThemeVisual.cheese),
+    );
+    expect(
+      BlockThemeVisual.forTheme(BlockTheme.neon),
+      same(BlockThemeVisual.neon),
     );
     expect(
       BlockThemeVisual.jelly.placementImpact.motion,
@@ -162,6 +167,15 @@ void main() {
       BlockImpactMotion.firmSettle,
     );
     expect(BlockThemeVisual.cheese.cutParticles, isNotNull);
+    expect(BlockThemeVisual.neon.surfaceDetail, BlockSurfaceDetail.neonStrips);
+    expect(
+      BlockThemeVisual.neon.placementImpact.motion,
+      BlockImpactMotion.neonPulse,
+    );
+    expect(
+      BlockThemeVisual.neon.roughnessFactor,
+      lessThan(BlockThemeVisual.chocolate.roughnessFactor),
+    );
     expect(
       BlockThemeVisual.chocolate.colorProgression.valueVariation,
       greaterThan(0),

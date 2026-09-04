@@ -99,6 +99,7 @@ void main() {
       BlockTheme.chocolate,
       BlockTheme.cheese,
       BlockTheme.neon,
+      BlockTheme.lego,
     ]);
     expect(
       BlockThemeVisual.forTheme(BlockTheme.classic),
@@ -119,6 +120,10 @@ void main() {
     expect(
       BlockThemeVisual.forTheme(BlockTheme.neon),
       same(BlockThemeVisual.neon),
+    );
+    expect(
+      BlockThemeVisual.forTheme(BlockTheme.lego),
+      same(BlockThemeVisual.lego),
     );
     expect(
       BlockThemeVisual.jelly.placementImpact.motion,
@@ -178,6 +183,12 @@ void main() {
       BlockThemeVisual.neon.roughnessFactor,
       lessThan(BlockThemeVisual.chocolate.roughnessFactor),
     );
+    expect(BlockThemeVisual.lego.surfaceDetail, BlockSurfaceDetail.brickStuds);
+    expect(
+      BlockThemeVisual.lego.placementImpact.motion,
+      BlockImpactMotion.brickLock,
+    );
+    expect(BlockThemeVisual.lego.cutParticles, isNotNull);
     expect(
       BlockThemeVisual.chocolate.colorProgression.valueVariation,
       greaterThan(0),

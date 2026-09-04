@@ -66,6 +66,7 @@ class SceneFallingPieceManager {
             depth: cutOff.depth,
             colorIndex: colorIndex,
             material: material,
+            includeThemeDetails: false,
           )
           ..position = piecePosition
           ..addComponent(

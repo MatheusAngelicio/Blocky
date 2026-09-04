@@ -28,6 +28,12 @@ class BlockThemeSceneRenderer {
     segments: 12,
     rings: 8,
   );
+  late final CylinderGeometry _brickStudGeometry = CylinderGeometry(
+    bottomRadius: 0.18,
+    topRadius: 0.18,
+    height: 0.105,
+    radialSegments: 16,
+  );
   late final CuboidGeometry _unitCube = CuboidGeometry(vm.Vector3.all(1.0));
   late final PhysicallyBasedMaterial _neonCyanMaterial = _createNeonMaterial(
     vm.Vector4(0.0, 0.96, 1.0, 1.0),
@@ -92,6 +98,13 @@ class BlockThemeSceneRenderer {
         colorIndex: colorIndex,
       ),
       BlockSurfaceDetail.neonStrips => _createNeonDetails(
+        block: block,
+        width: width,
+        depth: depth,
+        height: height,
+        colorIndex: colorIndex,
+      ),
+      BlockSurfaceDetail.brickStuds => _createBrickStudDetails(
         block: block,
         width: width,
         depth: depth,
@@ -453,6 +466,94 @@ class BlockThemeSceneRenderer {
     return details;
   }
 
+  List<Node> _createBrickStudDetails({
+    required Node block,
+    required double width,
+    required double depth,
+    required double height,
+    required int colorIndex,
+  }) {
+    final columns = _brickStudCount(width, maximum: 4);
+    final rows = _brickStudCount(depth, maximum: 3);
+    if (columns == 0 || rows == 0) return [];
+
+    final spacingX = width / columns;
+    final spacingZ = depth / rows;
+    final radius = math.min(0.18, math.min(spacingX, spacingZ) * 0.24);
+    if (radius < 0.055) return [];
+
+    final material = _createBrickStudMaterial(colorIndex);
+    final details = <Node>[];
+    final topY = height / 2 + 0.105 / 2 + 0.008;
+    for (var row = 0; row < rows; row++) {
+      for (var column = 0; column < columns; column++) {
+        final stud = Node(mesh: Mesh(_brickStudGeometry, material))
+          ..position = vm.Vector3(
+            -width / 2 + spacingX * (column + 0.5),
+            topY,
+            -depth / 2 + spacingZ * (row + 0.5),
+          )
+          ..scale = vm.Vector3(radius / 0.18, 1.0, radius / 0.18)
+          ..castsShadows = false;
+        block.add(stud);
+        details.add(stud);
+      }
+    }
+
+    _addBrickSideSeams(
+      block,
+      details,
+      material: _createBrickSideSeamMaterial(colorIndex),
+      width: width,
+      depth: depth,
+      height: height,
+      columns: columns,
+      rows: rows,
+    );
+    return details;
+  }
+
+  int _brickStudCount(double length, {required int maximum}) {
+    if (length < 0.36) return 0;
+    return math.min(maximum, math.max(1, (length / 0.82).floor()));
+  }
+
+  void _addBrickSideSeams(
+    Node block,
+    List<Node> details, {
+    required PhysicallyBasedMaterial material,
+    required double width,
+    required double depth,
+    required double height,
+    required int columns,
+    required int rows,
+  }) {
+    const seamWidth = 0.018;
+    const faceDepth = 0.012;
+    for (var column = 1; column < columns; column++) {
+      final x = -width / 2 + width * column / columns;
+      _addCuboidDetail(
+        block,
+        details,
+        material: material,
+        position: vm.Vector3(x, 0.0, -depth / 2 - faceDepth / 2 - 0.004),
+        scale: vm.Vector3(seamWidth, height * 0.9, faceDepth),
+        castsShadows: false,
+      );
+    }
+    for (var row = 1; row < rows; row++) {
+      final z = -depth / 2 + depth * row / rows;
+      _addCuboidDetail(
+        block,
+        details,
+        material: material,
+        position: vm.Vector3(-width / 2 - faceDepth / 2 - 0.004, 0.0, z),
+        scale: vm.Vector3(faceDepth, height * 0.9, seamWidth),
+        castsShadows: false,
+      );
+    }
+  }
+
   void _addCheeseHole(
     Node block,
     List<Node> details, {
@@ -694,6 +795,33 @@ class BlockThemeSceneRenderer {
       )
       ..metallicFactor = 0.0
       ..roughnessFactor = 0.6;
+  }
+
+  PhysicallyBasedMaterial _createBrickStudMaterial(int colorIndex) {
+    final color = _colorForIndex(colorIndex);
+    const highlightMix = 0.13;
+    return PhysicallyBasedMaterial()
+      ..baseColorFactor = vm.Vector4(
+        color.x + (1.0 - color.x) * highlightMix,
+        color.y + (1.0 - color.y) * highlightMix,
+        color.z + (1.0 - color.z) * highlightMix,
+        1.0,
+      )
+      ..metallicFactor = 0.0
+      ..roughnessFactor = 0.18;
+  }
+
+  PhysicallyBasedMaterial _createBrickSideSeamMaterial(int colorIndex) {
+    final color = _colorForIndex(colorIndex);
+    return PhysicallyBasedMaterial()
+      ..baseColorFactor = vm.Vector4(
+        color.x * 0.42,
+        color.y * 0.42,
+        color.z * 0.42,
+        1.0,
+      )
+      ..metallicFactor = 0.0
+      ..roughnessFactor = 0.36;
   }
 
   PhysicallyBasedMaterial _createNeonMaterial(vm.Vector4 color) {

@@ -43,6 +43,7 @@ Antes de definir o novo, compare-o com `BlockThemeVisual` e
 | Chocolate | divisões de tablete | assentamento firme |
 | Cheese | furos estáveis em topo e laterais | assentamento firme sutil |
 | Neon | moldura rosa, base ciano e trilhas de circuito em painel grafite | pulso de energia |
+| Lego | plástico brilhante, studs em grade e emendas laterais em malha única | travamento de peça |
 
 O novo tema não pode repetir a mesma combinação. Se usar uma família de
 movimento existente, use parâmetros perceptivelmente diferentes e documente a
@@ -75,11 +76,14 @@ collider e próximo overlap permanecem inalterados.
 4. Para variação aleatória, use `_detailSeeds[block]` e recrie a mesma
    sequência após um corte ou redimensionamento.
 5. Use geometria compartilhada (`late final`) e materiais reutilizados dentro
-   do bloco; não crie texturas ou partículas contínuas sem necessidade.
+   do bloco; não crie `MeshGeometry.fromArrays` por bloco ou por corte, nem
+   texturas ou partículas contínuas sem necessidade.
 6. Limite o número de Nodes decorativos. Blocos pequenos devem reduzir ou
    omitir detalhes que perderiam legibilidade.
 7. Garanta que detalhes sejam filhos do bloco e permaneçam compatíveis com
    `forget` e `clear` do renderer.
+8. Sobras físicas de corte devem omitir detalhes decorativos opcionais; elas
+   existem por pouco tempo e não justificam novas alocações de GPU.
 
 Não use detalhes para mudar a caixa lógica ou o collider da torre.
 

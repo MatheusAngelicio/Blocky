@@ -1,2 +1,2 @@
 /// Identifica o estilo visual aplicado aos blocos durante uma partida.
-enum BlockTheme { classic, jelly, chocolate, cheese, neon }
+enum BlockTheme { classic, jelly, chocolate, cheese, neon, lego }

@@ -340,6 +340,7 @@ class SceneFeedbackController {
       BlockImpactMotion.squashAndStretch => _jellyImpactScale(impact, progress),
       BlockImpactMotion.firmSettle => _firmSettleImpactScale(impact, progress),
       BlockImpactMotion.neonPulse => _neonPulseImpactScale(impact, progress),
+      BlockImpactMotion.brickLock => _brickLockImpactScale(impact, progress),
     };
   }
 
@@ -428,6 +429,38 @@ class SceneFeedbackController {
       1.0 + impact.horizontalScale * 0.22 * intensity,
       1.0 - impact.verticalScale * 0.16 * intensity,
       1.0 + impact.horizontalScale * 0.22 * intensity,
+    );
+  }
+
+  vm.Vector3 _brickLockImpactScale(BlockImpactVisual impact, double progress) {
+    const compressionPortion = 0.38;
+    const lockPortion = 0.68;
+    if (progress < compressionPortion) {
+      final compressionProgress = progress / compressionPortion;
+      final intensity = math.sin(math.pi / 2 * compressionProgress);
+      return vm.Vector3(
+        1.0 + impact.horizontalScale * intensity,
+        1.0 - impact.verticalScale * intensity,
+        1.0 + impact.horizontalScale * intensity,
+      );
+    }
+    if (progress < lockPortion) {
+      final lockProgress =
+          (progress - compressionPortion) / (lockPortion - compressionPortion);
+      final intensity = math.sin(math.pi / 2 * lockProgress);
+      return vm.Vector3(
+        1.0 - impact.reboundHorizontalScale * intensity,
+        1.0 + impact.reboundVerticalScale * intensity,
+        1.0 - impact.reboundHorizontalScale * intensity,
+      );
+    }
+
+    final settleProgress = (progress - lockPortion) / (1.0 - lockPortion);
+    final intensity = math.sin(math.pi * settleProgress);
+    return vm.Vector3(
+      1.0 + impact.horizontalScale * 0.16 * intensity,
+      1.0 - impact.verticalScale * 0.12 * intensity,
+      1.0 + impact.horizontalScale * 0.16 * intensity,
     );
   }
 

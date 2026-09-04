@@ -55,6 +55,7 @@ class SceneBlockFactory {
     double height = GameConfig.blockHeight,
     required int colorIndex,
     required PhysicallyBasedMaterial material,
+    bool includeThemeDetails = true,
   }) {
     final block = Node(
       mesh: Mesh(_createBlockGeometry(width, depth, height: height), material),
@@ -70,13 +71,15 @@ class SceneBlockFactory {
           ..castsShadows = false;
     block.add(topFaceShade);
     _topFaceShades[block] = topFaceShade;
-    _themeRenderer.updateDetails(
-      block: block,
-      width: width,
-      depth: depth,
-      height: height,
-      colorIndex: colorIndex,
-    );
+    if (includeThemeDetails) {
+      _themeRenderer.updateDetails(
+        block: block,
+        width: width,
+        depth: depth,
+        height: height,
+        colorIndex: colorIndex,
+      );
+    }
     return block;
   }
 

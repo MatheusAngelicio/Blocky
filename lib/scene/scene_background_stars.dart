@@ -1,18 +1,25 @@
 import 'dart:math' as math;
 
+import 'package:blocky/game/block_theme.dart';
 import 'package:blocky/game/game_config.dart';
 import 'package:blocky/scene/scene_effect_models.dart';
+import 'package:blocky/scene/sky_progression.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
 /// Campo de estrelas leve que acompanha verticalmente a câmera.
 class SceneBackgroundStars {
-  SceneBackgroundStars({required Scene scene, required math.Random random})
-    : _scene = scene,
-      _random = random;
+  SceneBackgroundStars({
+    required Scene scene,
+    required math.Random random,
+    required BlockTheme theme,
+  }) : _profile = SkyThemeProfile.forTheme(theme),
+       _scene = scene,
+       _random = random;
 
   final Scene _scene;
   final math.Random _random;
+  final SkyThemeProfile _profile;
   final List<SceneBackgroundStar> _stars = [];
 
   void clear() => _stars.clear();
@@ -56,11 +63,15 @@ class SceneBackgroundStars {
     if (_stars.isEmpty) return;
 
     final nightProgress = (score / 80).clamp(0.0, 1.0).toDouble();
+    final themedNightProgress = math.max(
+      _profile.minimumStarVisibility,
+      nightProgress,
+    );
     final maximumOpacity =
         GameConfig.backgroundStarDayOpacity +
         (GameConfig.backgroundStarNightOpacity -
                 GameConfig.backgroundStarDayOpacity) *
-            nightProgress;
+            themedNightProgress;
     for (final star in _stars) {
       star.elapsedSeconds += deltaSeconds;
       final blink = math
@@ -78,15 +89,30 @@ class SceneBackgroundStars {
         star.depth,
       );
       star.node.scale = vm.Vector3.all(0.7 + blink * 0.55);
-      star.material.baseColorFactor = vm.Vector4(1.0, 0.96, 0.82, opacity);
+      star.material.baseColorFactor = vm.Vector4(
+        _profile.starColor.x,
+        _profile.starColor.y,
+        _profile.starColor.z,
+        opacity,
+      );
       star.material.emissiveStrength = 0.55 + blink * 1.25;
     }
   }
 
   PhysicallyBasedMaterial _createMaterial() {
     return PhysicallyBasedMaterial()
-      ..baseColorFactor = vm.Vector4(1.0, 0.96, 0.82, 0.0)
-      ..emissiveFactor = vm.Vector4(1.0, 0.96, 0.82, 1.0)
+      ..baseColorFactor = vm.Vector4(
+        _profile.starColor.x,
+        _profile.starColor.y,
+        _profile.starColor.z,
+        0.0,
+      )
+      ..emissiveFactor = vm.Vector4(
+        _profile.starColor.x,
+        _profile.starColor.y,
+        _profile.starColor.z,
+        1.0,
+      )
       ..emissiveStrength = 1.0
       ..metallicFactor = 0.0
       ..roughnessFactor = 1.0

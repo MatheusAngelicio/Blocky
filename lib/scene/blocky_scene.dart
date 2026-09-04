@@ -102,7 +102,11 @@ class _BlockySceneState extends State<BlockyScene> {
       visual: _blockThemeVisual,
       colorForIndex: _linearBlockColor,
     );
-    _backgroundStars = SceneBackgroundStars(scene: _scene, random: _random);
+    _backgroundStars = SceneBackgroundStars(
+      scene: _scene,
+      random: _random,
+      theme: widget.blockTheme,
+    );
     widget.gameController.addListener(_onGameStateChanged);
     _initializeScene();
   }
@@ -139,6 +143,7 @@ class _BlockySceneState extends State<BlockyScene> {
       SkyProgression.applyTo(
         _skySource,
         widget.gameController.score,
+        theme: widget.blockTheme,
         variation: _skyVariation,
       );
     }
@@ -155,7 +160,11 @@ class _BlockySceneState extends State<BlockyScene> {
       sunDirection: vm.Vector3(-0.45, 0.75, -0.5),
       sunSharpness: 1200.0,
     );
-    SkyProgression.applyTo(_skySource, widget.gameController.score);
+    SkyProgression.applyTo(
+      _skySource,
+      widget.gameController.score,
+      theme: widget.blockTheme,
+    );
     _scene.skybox = Skybox(_skySource);
     _scene.directionalLight = DirectionalLight(
       direction: vm.Vector3(-0.45, -1.0, -0.5),
@@ -209,6 +218,7 @@ class _BlockySceneState extends State<BlockyScene> {
     SkyProgression.applyTo(
       _skySource,
       widget.gameController.score,
+      theme: widget.blockTheme,
       variation: _skyVariation,
     );
     _backgroundStars.create();

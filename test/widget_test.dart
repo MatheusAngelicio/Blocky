@@ -210,6 +210,25 @@ void main() {
     expect(night.zenith.y, lessThan(daylight.zenith.y));
   });
 
+  test('adapts the background palette to the selected block theme', () {
+    final classic = SkyProgression.paletteForScore(0);
+    final jelly = SkyProgression.paletteForScore(0, theme: BlockTheme.jelly);
+    final chocolate = SkyProgression.paletteForScore(
+      0,
+      theme: BlockTheme.chocolate,
+    );
+    final neon = SkyProgression.paletteForScore(0, theme: BlockTheme.neon);
+
+    expect(jelly.horizon, isNot(classic.horizon));
+    expect(chocolate.sun, isNot(classic.sun));
+    expect(neon.zenith.y, lessThan(classic.zenith.y));
+    expect(neon.ground.z, lessThan(classic.ground.z));
+    expect(
+      SkyThemeProfile.forTheme(BlockTheme.neon).minimumStarVisibility,
+      greaterThan(0),
+    );
+  });
+
   test('stops the moving block', () {
     final gameController = BlockyGameController();
 

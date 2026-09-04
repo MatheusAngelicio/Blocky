@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:blocky/game/block_color_palette.dart';
 import 'package:blocky/game/block_overlap.dart';
 import 'package:blocky/game/block_theme.dart';
@@ -227,6 +229,25 @@ void main() {
       SkyThemeProfile.forTheme(BlockTheme.neon).minimumStarVisibility,
       greaterThan(0),
     );
+  });
+
+  test('varies the atmosphere between consecutive rounds', () {
+    final random = math.Random(12);
+    final first = SkyProgression.randomVariation(random);
+    final second = SkyProgression.randomVariation(random, previous: first);
+    final firstPalette = SkyProgression.paletteForScore(
+      0,
+      theme: BlockTheme.neon,
+      variation: first,
+    );
+    final secondPalette = SkyProgression.paletteForScore(
+      0,
+      theme: BlockTheme.neon,
+      variation: second,
+    );
+
+    expect(second.name, isNot(first.name));
+    expect(firstPalette.horizon.x, isNot(secondPalette.horizon.x));
   });
 
   test('stops the moving block', () {

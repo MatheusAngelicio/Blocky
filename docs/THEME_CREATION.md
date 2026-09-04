@@ -101,7 +101,26 @@ Também revise `perfectWobble` e `recoveryGrowthOvershoot` para que Perfect e
 Recovery sejam coerentes com a assinatura do tema, sem substituir o feedback
 principal do encaixe normal.
 
-## 6. Integre a Home
+## 6. Configure o cenário por tema
+
+O fundo faz parte da identidade do tema, mas deve continuar leve: não crie uma
+cena 3D exclusiva para cada tema.
+
+1. Revise o perfil em `lib/scene/sky_progression.dart`, usando
+   `SkyThemeProfile.forTheme` como fonte única das cores do céu e das estrelas.
+2. Defina uma atmosfera que preserve contraste com os blocos: zenith, horizon,
+   ground e sun devem apoiar o material, nunca escondê-lo.
+3. Escolha a cor das estrelas e `minimumStarVisibility`. Temas noturnos, como
+   Neon, podem começar com estrelas mais visíveis; temas claros devem deixá-las
+   discretas.
+4. Não adicione estrelas, luzes ou partículas novas para diferenciar o tema.
+   A quantidade de Nodes do fundo é compartilhada entre todos os temas.
+5. As variações `balanced`, `solar`, `ocean`, `violet` e `rose` são sorteadas
+   por partida e não se repetem em um restart consecutivo. Ao criar um tema,
+   confira visualmente ao menos duas partidas para garantir que todas preservam
+   legibilidade.
+
+## 7. Integre a Home
 
 1. Adicione acento e cores de preview em `lib/app/blocky_colors.dart`.
 2. Atualize os `switches` de `themeAccent` e `themePreviewTower`.
@@ -113,7 +132,7 @@ O seletor de temas deve permanecer rolável quando a lista não couber na altura
 disponível. Não suponha que a quantidade atual de temas caiba em um dispositivo
 específico.
 
-## 7. Teste e revise
+## 8. Teste e revise
 
 1. Atualize `test/widget_test.dart` para incluir o novo valor de `BlockTheme`.
 2. Teste que `BlockThemeVisual.forTheme` retorna a configuração correta.
@@ -130,7 +149,7 @@ específico.
 
 5. Faça uma validação visual manual no dispositivo ou simulador escolhido pelo
    responsável pelo projeto, observando blocos completos, cortados, Perfect,
-   Recovery e restart.
+   Recovery, restart e duas variações de cenário do mesmo tema.
 6. Atualize `docs/GAME_DESIGN.md`, `docs/ARCHITECTURE.md` e
    `docs/DECISIONS.md` se a mudança alterar descrição de tema, estrutura ou
    uma decisão arquitetural.
@@ -141,6 +160,7 @@ específico.
 - [ ] A identidade visual continua reconhecível após corte.
 - [ ] Os detalhes aleatórios são estáveis e limpos em restart/dispose.
 - [ ] O encaixe normal é visualmente distinto de todos os outros temas.
+- [ ] O cenário tem perfil próprio, mantém contraste e varia entre partidas.
 - [ ] Perfect e Recovery mantêm as mesmas regras de gameplay.
 - [ ] Não foram criadas dependências ou camadas novas sem necessidade.
 - [ ] Análise, testes e revisão de diff passaram.

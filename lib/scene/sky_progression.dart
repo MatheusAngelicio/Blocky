@@ -9,10 +9,11 @@ abstract final class SkyProgression {
   static const _scoreToReachNight = 80;
 
   static final _variations = <SkyProgressionVariation>[
-    SkyProgressionVariation(vm.Vector3(1.0, 1.0, 1.0)),
-    SkyProgressionVariation(vm.Vector3(0.84, 1.02, 1.18)),
-    SkyProgressionVariation(vm.Vector3(1.14, 0.93, 0.86)),
-    SkyProgressionVariation(vm.Vector3(0.93, 1.1, 1.02)),
+    SkyProgressionVariation('balanced', vm.Vector3(1.0, 1.0, 1.0)),
+    SkyProgressionVariation('solar', vm.Vector3(1.36, 0.76, 0.42)),
+    SkyProgressionVariation('ocean', vm.Vector3(0.5, 0.9, 1.52)),
+    SkyProgressionVariation('violet', vm.Vector3(0.72, 0.46, 1.54)),
+    SkyProgressionVariation('rose', vm.Vector3(1.34, 0.5, 1.04)),
   ];
 
   static final _stops = <_SkyStop>[
@@ -72,9 +73,25 @@ abstract final class SkyProgression {
     ),
   ];
 
-  /// Escolhe uma variação controlada da jornada de céu para uma partida.
-  static SkyProgressionVariation randomVariation(math.Random random) {
-    return _variations[random.nextInt(_variations.length)];
+  /// Escolhe uma atmosfera perceptivelmente diferente para cada partida.
+  ///
+  /// A variação anterior é excluída para que um restart não reapresente a
+  /// mesma cor de fundo na mesma sessão.
+  static SkyProgressionVariation randomVariation(
+    math.Random random, {
+    SkyProgressionVariation? previous,
+  }) {
+    if (previous == null) {
+      return _variations[random.nextInt(_variations.length)];
+    }
+
+    final previousIndex = _variations.indexOf(previous);
+    if (previousIndex < 0) {
+      return _variations[random.nextInt(_variations.length)];
+    }
+    var index = random.nextInt(_variations.length - 1);
+    if (index >= previousIndex) index++;
+    return _variations[index];
   }
 
   static SkyPalette paletteForScore(
@@ -260,11 +277,12 @@ class SkyPalette {
   }
 }
 
-/// Mantém a sequência de altitude intacta, alterando apenas seu tom global.
+/// Mantém a sequência de altitude intacta, alterando sua atmosfera por rodada.
 class SkyProgressionVariation {
-  SkyProgressionVariation(this.colorScale);
+  SkyProgressionVariation(this.name, this.colorScale);
 
   final vm.Vector3 colorScale;
+  final String name;
 }
 
 class _SkyStop {

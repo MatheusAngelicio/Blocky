@@ -48,7 +48,7 @@ class _BlockySceneState extends State<BlockyScene> {
   late final SceneFallingPieceManager _fallingPieceManager;
   late final SceneFeedbackController _feedbackController;
   late final GradientSkySource _skySource;
-  late SkyProgressionVariation _skyVariation;
+  SkyProgressionVariation? _skyVariation;
   PhysicsWorld? _physicsWorld;
   late PhysicallyBasedMaterial _movingBlockMaterial;
   late Node _movingBlock;
@@ -212,7 +212,10 @@ class _BlockySceneState extends State<BlockyScene> {
     _movingDirection = 1.0;
     _tower.reset();
     _initialBlockHue = _random.nextDouble() * 360.0;
-    _skyVariation = SkyProgression.randomVariation(_random);
+    _skyVariation = SkyProgression.randomVariation(
+      _random,
+      previous: _skyVariation,
+    );
     _nextBlockColorIndex = 0;
     _resetCamera();
     SkyProgression.applyTo(

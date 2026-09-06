@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-
 import 'package:blocky/app/arcade_colors.dart';
 import 'package:blocky/app/arcade_design_system.dart';
 import 'package:blocky/app/blocky_colors.dart';
@@ -29,30 +28,35 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadBestScore();
-    _loadBlockyCoins();
-    _loadSelectedTheme();
+    _loadInitialState();
   }
 
-  Future<void> _loadBestScore() async {
-    final bestScore = await _bestScoreStorage.load();
+  Future<void> _loadInitialState() async {
+    final results = await Future.wait<Object>([
+      _bestScoreStorage.load(),
+      _blockyCoinStorage.load(),
+      _blockThemeStorage.load(),
+    ]);
     if (!mounted) return;
 
-    setState(() => _bestScore = bestScore);
+    setState(() {
+      _bestScore = results[0] as int;
+      _blockyCoins = results[1] as int;
+      _selectedTheme = results[2] as BlockTheme;
+    });
   }
 
-  Future<void> _loadBlockyCoins() async {
-    final blockyCoins = await _blockyCoinStorage.load();
+  Future<void> _refreshGameStats() async {
+    final results = await Future.wait<int>([
+      _bestScoreStorage.load(),
+      _blockyCoinStorage.load(),
+    ]);
     if (!mounted) return;
 
-    setState(() => _blockyCoins = blockyCoins);
-  }
-
-  Future<void> _loadSelectedTheme() async {
-    final selectedTheme = await _blockThemeStorage.load();
-    if (!mounted) return;
-
-    setState(() => _selectedTheme = selectedTheme);
+    setState(() {
+      _bestScore = results[0];
+      _blockyCoins = results[1];
+    });
   }
 
   Future<void> _startGame() async {
@@ -61,10 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (_) => GameScreen(blockTheme: _selectedTheme),
       ),
     );
-    if (mounted) {
-      _loadBestScore();
-      _loadBlockyCoins();
-    }
+    if (mounted) _refreshGameStats();
   }
 
   Future<void> _showThemeSelector() async {
@@ -83,87 +84,129 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeColor = BlockyColors.themeAccent(_selectedTheme);
-
     return Scaffold(
       backgroundColor: ArcadeColors.canvas,
       body: ArcadeBackdrop(
         child: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-                child: Column(
-                  children: [
-                    const Text('BLOCKY', style: ArcadeTypography.logo),
-                    const SizedBox(height: 8),
-                    const Text('STACK IT UP', style: ArcadeTypography.tagline),
-                    const SizedBox(height: 26),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ArcadeStat(
-                            label: 'BLOCKY COINS',
-                            value: '$_blockyCoins',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ArcadeStat(
-                            label: 'BEST',
-                            value: '$_bestScore',
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ArcadePanel(
-                        accent: themeColor,
-                        borderWidth: 3,
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                        shadowOffset: const Offset(5, 6),
-                        child: Column(
-                          children: [
-                            Text(
-                              'CURRENT SET · ${_themeName(_selectedTheme).toUpperCase()}',
-                              style: ArcadeTypography.label.copyWith(
-                                color: themeColor,
-                                fontSize: 12,
-                                letterSpacing: 1.5,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            SizedBox(
-                              height: 205,
-                              child: CustomPaint(
-                                painter: _ThemeTowerPainter(_selectedTheme),
-                                child: const SizedBox.expand(),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    ArcadeButton(
-                      label: 'PLAY',
-                      color: themeColor,
-                      onPressed: _startGame,
-                    ),
-                    const SizedBox(height: 14),
-                    ArcadeButton(
-                      label: 'BLOCK THEME',
-                      color: ArcadeColors.strongOutline,
-                      onPressed: _showThemeSelector,
-                    ),
-                  ],
-                ),
+          child: _HomeContent(
+            selectedTheme: _selectedTheme,
+            bestScore: _bestScore,
+            blockyCoins: _blockyCoins,
+            onPlay: _startGame,
+            onChooseTheme: _showThemeSelector,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Conteúdo puro da Home, separado do carregamento e navegação da tela.
+class _HomeContent extends StatelessWidget {
+  const _HomeContent({
+    required this.selectedTheme,
+    required this.bestScore,
+    required this.blockyCoins,
+    required this.onPlay,
+    required this.onChooseTheme,
+  });
+
+  final BlockTheme selectedTheme;
+  final int bestScore;
+  final int blockyCoins;
+  final VoidCallback onPlay;
+  final VoidCallback onChooseTheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final themeColor = BlockyColors.themeAccent(selectedTheme);
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+          child: Column(
+            children: [
+              const Text('BLOCKY', style: ArcadeTypography.logo),
+              const SizedBox(height: 8),
+              const Text('STACK IT UP', style: ArcadeTypography.tagline),
+              const SizedBox(height: 26),
+              _HomeStats(blockyCoins: blockyCoins, bestScore: bestScore),
+              const SizedBox(height: 24),
+              _ThemePreview(theme: selectedTheme, accent: themeColor),
+              const SizedBox(height: 28),
+              ArcadeButton(label: 'PLAY', color: themeColor, onPressed: onPlay),
+              const SizedBox(height: 14),
+              ArcadeButton(
+                label: 'BLOCK THEME',
+                color: ArcadeColors.strongOutline,
+                onPressed: onChooseTheme,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeStats extends StatelessWidget {
+  const _HomeStats({required this.blockyCoins, required this.bestScore});
+
+  final int blockyCoins;
+  final int bestScore;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: ArcadeStat(label: 'BLOCKY COINS', value: '$blockyCoins'),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ArcadeStat(label: 'BEST', value: '$bestScore'),
+        ),
+      ],
+    );
+  }
+}
+
+class _ThemePreview extends StatelessWidget {
+  const _ThemePreview({required this.theme, required this.accent});
+
+  final BlockTheme theme;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ArcadePanel(
+        accent: accent,
+        borderWidth: 3,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        shadowOffset: const Offset(5, 6),
+        child: Column(
+          children: [
+            Text(
+              'CURRENT SET · ${_themeName(theme).toUpperCase()}',
+              style: ArcadeTypography.label.copyWith(
+                color: accent,
+                fontSize: 12,
+                letterSpacing: 1.5,
               ),
             ),
-          ),
+            const SizedBox(height: 4),
+            SizedBox(
+              height: 205,
+              child: CustomPaint(
+                painter: _ThemeTowerPainter(theme),
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ],
         ),
       ),
     );

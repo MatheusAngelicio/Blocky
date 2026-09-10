@@ -5,6 +5,8 @@ import 'package:blocky/scene/block_theme_visual.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
+enum _BlockSide { left, right, front, back }
+
 /// Renderiza detalhes 3D próprios de um tema, sem conhecer regras do jogo.
 ///
 /// O retorno permite que a Scene descarte os Nodes decorativos quando um bloco
@@ -235,43 +237,47 @@ class BlockThemeSceneRenderer {
 
     final sideHoleCount = topHoleCount > 2 ? 1 + random.nextInt(2) : 1;
     if (depth >= 0.65) {
-      for (var index = 0; index < sideHoleCount; index++) {
-        final radius = baseRadius * (0.45 + random.nextDouble() * 0.48);
-        _addCheeseHole(
-          block,
-          details,
-          material: material,
-          position: vm.Vector3(
-            -width / 2 + radius * 0.22 - 0.01,
-            (-0.24 + random.nextDouble() * 0.5) * height,
-            (-0.26 + random.nextDouble() * 0.52) * depth,
-          ),
-          scale: vm.Vector3(
-            radius * 0.22,
-            radius * 0.88,
-            radius * (0.72 + random.nextDouble() * 0.58),
-          ),
-        );
+      for (final side in const [-1.0, 1.0]) {
+        for (var index = 0; index < sideHoleCount; index++) {
+          final radius = baseRadius * (0.45 + random.nextDouble() * 0.48);
+          _addCheeseHole(
+            block,
+            details,
+            material: material,
+            position: vm.Vector3(
+              side * (width / 2 - radius * 0.22 + 0.01),
+              (-0.24 + random.nextDouble() * 0.5) * height,
+              (-0.26 + random.nextDouble() * 0.52) * depth,
+            ),
+            scale: vm.Vector3(
+              radius * 0.22,
+              radius * 0.88,
+              radius * (0.72 + random.nextDouble() * 0.58),
+            ),
+          );
+        }
       }
     }
     if (width >= 0.65) {
-      for (var index = 0; index < sideHoleCount; index++) {
-        final radius = baseRadius * (0.45 + random.nextDouble() * 0.48);
-        _addCheeseHole(
-          block,
-          details,
-          material: material,
-          position: vm.Vector3(
-            (-0.28 + random.nextDouble() * 0.56) * width,
-            (-0.24 + random.nextDouble() * 0.5) * height,
-            -depth / 2 + radius * 0.22 - 0.01,
-          ),
-          scale: vm.Vector3(
-            radius * (0.72 + random.nextDouble() * 0.58),
-            radius * 0.88,
-            radius * 0.22,
-          ),
-        );
+      for (final side in const [-1.0, 1.0]) {
+        for (var index = 0; index < sideHoleCount; index++) {
+          final radius = baseRadius * (0.45 + random.nextDouble() * 0.48);
+          _addCheeseHole(
+            block,
+            details,
+            material: material,
+            position: vm.Vector3(
+              (-0.28 + random.nextDouble() * 0.56) * width,
+              (-0.24 + random.nextDouble() * 0.5) * height,
+              side * (depth / 2 - radius * 0.22 + 0.01),
+            ),
+            scale: vm.Vector3(
+              radius * (0.72 + random.nextDouble() * 0.58),
+              radius * 0.88,
+              radius * 0.22,
+            ),
+          );
+        }
       }
     }
     return details;
@@ -325,6 +331,13 @@ class BlockThemeSceneRenderer {
         position: vm.Vector3(x, 0.0, -depth / 2 - sideGrooveDepth / 2),
         scale: vm.Vector3(grooveThickness, height * 0.9, sideGrooveDepth),
       );
+      _addCuboidDetail(
+        block,
+        details,
+        material: material,
+        position: vm.Vector3(x, 0.0, depth / 2 + sideGrooveDepth / 2),
+        scale: vm.Vector3(grooveThickness, height * 0.9, sideGrooveDepth),
+      );
     }
     for (var row = 1; row < rows; row++) {
       final z = -depth / 2 + depth * row / rows;
@@ -344,6 +357,13 @@ class BlockThemeSceneRenderer {
         details,
         material: material,
         position: vm.Vector3(-width / 2 - sideGrooveDepth / 2, 0.0, z),
+        scale: vm.Vector3(sideGrooveDepth, height * 0.9, grooveThickness),
+      );
+      _addCuboidDetail(
+        block,
+        details,
+        material: material,
+        position: vm.Vector3(width / 2 + sideGrooveDepth / 2, 0.0, z),
         scale: vm.Vector3(sideGrooveDepth, height * 0.9, grooveThickness),
       );
     }
@@ -407,62 +427,67 @@ class BlockThemeSceneRenderer {
       castsShadows: false,
     );
 
-    // Blocos pequenos conservam somente a moldura. Nos demais, as duas
-    // linhas ciano inferiores e dois segmentos de circuito dão profundidade
-    // sem passar de oito Nodes decorativos por bloco.
+    // Blocos pequenos conservam somente a moldura. Nos demais, os detalhes
+    // ciano e os circuitos percorrem todas as faces laterais, mantendo a
+    // identidade do bloco durante a rotação da câmera.
     if (width < 0.72 || depth < 0.72) return details;
-
-    _addCuboidDetail(
-      block,
-      details,
-      material: _neonCyanMaterial,
-      position: vm.Vector3(
-        0.0,
-        -height / 2 + height * 0.18,
-        -depth / 2 - faceDepth / 2 - 0.003,
-      ),
-      scale: vm.Vector3(insetWidth, frameHeight, faceDepth),
-      castsShadows: false,
-    );
-    _addCuboidDetail(
-      block,
-      details,
-      material: _neonCyanMaterial,
-      position: vm.Vector3(
-        -width / 2 - faceDepth / 2 - 0.003,
-        -height / 2 + height * 0.18,
-        0.0,
-      ),
-      scale: vm.Vector3(faceDepth, frameHeight, insetDepth),
-      castsShadows: false,
-    );
 
     final circuitMaterial =
         _neonCircuitMaterials[colorIndex % _neonCircuitMaterials.length];
-    _addCuboidDetail(
-      block,
-      details,
-      material: circuitMaterial,
-      position: vm.Vector3(
-        -width * 0.18,
-        height * 0.04,
-        -depth / 2 - faceDepth / 2 - 0.004,
-      ),
-      scale: vm.Vector3(width * 0.25, frameHeight * 0.62, faceDepth),
-      castsShadows: false,
-    );
-    _addCuboidDetail(
-      block,
-      details,
-      material: circuitMaterial,
-      position: vm.Vector3(
-        width * 0.07,
-        height * 0.16,
-        -depth / 2 - faceDepth / 2 - 0.004,
-      ),
-      scale: vm.Vector3(frameThickness * 0.72, height * 0.3, faceDepth),
-      castsShadows: false,
-    );
+    for (final side in const [-1.0, 1.0]) {
+      final z = side * (depth / 2 + faceDepth / 2 + 0.003);
+      _addCuboidDetail(
+        block,
+        details,
+        material: _neonCyanMaterial,
+        position: vm.Vector3(0.0, -height / 2 + height * 0.18, z),
+        scale: vm.Vector3(insetWidth, frameHeight, faceDepth),
+        castsShadows: false,
+      );
+      _addCuboidDetail(
+        block,
+        details,
+        material: circuitMaterial,
+        position: vm.Vector3(-width * 0.18, height * 0.04, z + side * 0.001),
+        scale: vm.Vector3(width * 0.25, frameHeight * 0.62, faceDepth),
+        castsShadows: false,
+      );
+      _addCuboidDetail(
+        block,
+        details,
+        material: circuitMaterial,
+        position: vm.Vector3(width * 0.07, height * 0.16, z + side * 0.001),
+        scale: vm.Vector3(frameThickness * 0.72, height * 0.3, faceDepth),
+        castsShadows: false,
+      );
+    }
+    for (final side in const [-1.0, 1.0]) {
+      final x = side * (width / 2 + faceDepth / 2 + 0.003);
+      _addCuboidDetail(
+        block,
+        details,
+        material: _neonCyanMaterial,
+        position: vm.Vector3(x, -height / 2 + height * 0.18, 0.0),
+        scale: vm.Vector3(faceDepth, frameHeight, insetDepth),
+        castsShadows: false,
+      );
+      _addCuboidDetail(
+        block,
+        details,
+        material: circuitMaterial,
+        position: vm.Vector3(x + side * 0.001, height * 0.04, depth * 0.18),
+        scale: vm.Vector3(faceDepth, frameHeight * 0.62, depth * 0.25),
+        castsShadows: false,
+      );
+      _addCuboidDetail(
+        block,
+        details,
+        material: circuitMaterial,
+        position: vm.Vector3(x + side * 0.001, height * 0.16, -depth * 0.07),
+        scale: vm.Vector3(faceDepth, height * 0.3, frameThickness * 0.72),
+        castsShadows: false,
+      );
+    }
     return details;
   }
 
@@ -474,7 +499,7 @@ class BlockThemeSceneRenderer {
     required int colorIndex,
   }) {
     final columns = _brickStudCount(width, maximum: 4);
-    final rows = _brickStudCount(depth, maximum: 3);
+    final rows = _brickStudCount(depth, maximum: 4);
     if (columns == 0 || rows == 0) return [];
 
     final spacingX = width / columns;
@@ -540,6 +565,14 @@ class BlockThemeSceneRenderer {
         scale: vm.Vector3(seamWidth, height * 0.9, faceDepth),
         castsShadows: false,
       );
+      _addCuboidDetail(
+        block,
+        details,
+        material: material,
+        position: vm.Vector3(x, 0.0, depth / 2 + faceDepth / 2 + 0.004),
+        scale: vm.Vector3(seamWidth, height * 0.9, faceDepth),
+        castsShadows: false,
+      );
     }
     for (var row = 1; row < rows; row++) {
       final z = -depth / 2 + depth * row / rows;
@@ -548,6 +581,14 @@ class BlockThemeSceneRenderer {
         details,
         material: material,
         position: vm.Vector3(-width / 2 - faceDepth / 2 - 0.004, 0.0, z),
+        scale: vm.Vector3(faceDepth, height * 0.9, seamWidth),
+        castsShadows: false,
+      );
+      _addCuboidDetail(
+        block,
+        details,
+        material: material,
+        position: vm.Vector3(width / 2 + faceDepth / 2 + 0.004, 0.0, z),
         scale: vm.Vector3(faceDepth, height * 0.9, seamWidth),
         castsShadows: false,
       );
@@ -592,32 +633,27 @@ class BlockThemeSceneRenderer {
     required double height,
     required int colorIndex,
   }) {
-    final leftFace = Node(
-      mesh: Mesh(
-        _createPreviewSideGeometry(
-          width: width,
-          depth: depth,
-          height: height,
-          leftSide: true,
+    final faces = <Node>[];
+    for (final side in _BlockSide.values) {
+      final brightness = switch (side) {
+        _BlockSide.left || _BlockSide.right => 1.0,
+        _BlockSide.front || _BlockSide.back => 0.75,
+      };
+      final face = Node(
+        mesh: Mesh(
+          _createPreviewSideGeometry(
+            width: width,
+            depth: depth,
+            height: height,
+            side: side,
+          ),
+          _createPreviewSideMaterial(colorIndex, brightness: brightness),
         ),
-        _createPreviewSideMaterial(colorIndex, brightness: 1.0),
-      ),
-    )..castsShadows = false;
-    final rightFace = Node(
-      mesh: Mesh(
-        _createPreviewSideGeometry(
-          width: width,
-          depth: depth,
-          height: height,
-          leftSide: false,
-        ),
-        _createPreviewSideMaterial(colorIndex, brightness: 0.75),
-      ),
-    )..castsShadows = false;
-    block
-      ..add(leftFace)
-      ..add(rightFace);
-    return [leftFace, rightFace];
+      )..castsShadows = false;
+      block.add(face);
+      faces.add(face);
+    }
+    return faces;
   }
 
   MeshGeometry _createClassicTopSheenGeometry({
@@ -663,15 +699,15 @@ class BlockThemeSceneRenderer {
     required double width,
     required double depth,
     required double height,
-    required bool leftSide,
+    required _BlockSide side,
   }) {
     const faceOffset = 0.005;
     final halfWidth = width / 2;
     final halfDepth = depth / 2;
     final halfHeight = height / 2;
-    if (leftSide) {
-      return MeshGeometry.fromArrays(
-        positions: Float32List.fromList([
+    final (positions, normal) = switch (side) {
+      _BlockSide.left => (
+        [
           -halfWidth - faceOffset,
           -halfHeight,
           halfDepth,
@@ -684,52 +720,68 @@ class BlockThemeSceneRenderer {
           -halfWidth - faceOffset,
           halfHeight,
           -halfDepth,
-        ]),
-        normals: Float32List.fromList([
-          -1.0,
-          0.0,
-          0.0,
-          -1.0,
-          0.0,
-          0.0,
-          -1.0,
-          0.0,
-          0.0,
-          -1.0,
-          0.0,
-          0.0,
-        ]),
-        indices: [0, 2, 1, 1, 2, 3],
-      );
-    }
+        ],
+        [-1.0, 0.0, 0.0],
+      ),
+      _BlockSide.right => (
+        [
+          halfWidth + faceOffset,
+          -halfHeight,
+          -halfDepth,
+          halfWidth + faceOffset,
+          -halfHeight,
+          halfDepth,
+          halfWidth + faceOffset,
+          halfHeight,
+          -halfDepth,
+          halfWidth + faceOffset,
+          halfHeight,
+          halfDepth,
+        ],
+        [1.0, 0.0, 0.0],
+      ),
+      _BlockSide.front => (
+        [
+          -halfWidth,
+          -halfHeight,
+          -halfDepth - faceOffset,
+          halfWidth,
+          -halfHeight,
+          -halfDepth - faceOffset,
+          -halfWidth,
+          halfHeight,
+          -halfDepth - faceOffset,
+          halfWidth,
+          halfHeight,
+          -halfDepth - faceOffset,
+        ],
+        [0.0, 0.0, -1.0],
+      ),
+      _BlockSide.back => (
+        [
+          halfWidth,
+          -halfHeight,
+          halfDepth + faceOffset,
+          -halfWidth,
+          -halfHeight,
+          halfDepth + faceOffset,
+          halfWidth,
+          halfHeight,
+          halfDepth + faceOffset,
+          -halfWidth,
+          halfHeight,
+          halfDepth + faceOffset,
+        ],
+        [0.0, 0.0, 1.0],
+      ),
+    };
     return MeshGeometry.fromArrays(
-      positions: Float32List.fromList([
-        -halfWidth,
-        -halfHeight,
-        -halfDepth - faceOffset,
-        halfWidth,
-        -halfHeight,
-        -halfDepth - faceOffset,
-        -halfWidth,
-        halfHeight,
-        -halfDepth - faceOffset,
-        halfWidth,
-        halfHeight,
-        -halfDepth - faceOffset,
-      ]),
+      positions: Float32List.fromList(positions),
       normals: Float32List.fromList([
-        0.0,
-        0.0,
-        -1.0,
-        0.0,
-        0.0,
-        -1.0,
-        0.0,
-        0.0,
-        -1.0,
-        0.0,
-        0.0,
-        -1.0,
+        ...normal,
+        ...normal,
+        ...normal,
+        ...normal,
       ]),
       indices: [0, 2, 1, 1, 2, 3],
     );

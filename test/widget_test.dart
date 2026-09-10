@@ -17,6 +17,7 @@ import 'package:blocky/scene/sky_progression.dart';
 import 'package:blocky/app/arcade_colors.dart';
 import 'package:blocky/app/arcade_design_system.dart';
 import 'package:blocky/app/blocky_app.dart';
+import 'package:blocky/app/blocky_localizations.dart';
 import 'package:blocky/ui/settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -45,6 +46,17 @@ void main() {
     expect(
       theme.bottomSheetTheme.modalBackgroundColor,
       ArcadeColors.elevatedSurface,
+    );
+  });
+
+  test('uses Portuguese text when Portuguese is selected', () {
+    const localizations = BlockyLocalizations(Locale('pt'));
+
+    expect(localizations.settings, 'CONFIGURAÇÕES');
+    expect(localizations.play, 'JOGAR');
+    expect(
+      localizations.perfectFeedback(streak: 2, isRecovery: false),
+      'PERFEITO! x2',
     );
   });
 
@@ -228,18 +240,25 @@ void main() {
         GameSettings.defaultSoundVolume,
       );
       expect((await storage.load()).hapticsEnabled, isTrue);
+      expect((await storage.load()).language, AppLanguage.system);
 
-      const settings = GameSettings(soundVolume: 0.35, hapticsEnabled: false);
+      const settings = GameSettings(
+        soundVolume: 0.35,
+        hapticsEnabled: false,
+        language: AppLanguage.portuguese,
+      );
       await storage.save(settings);
 
       final restored = await storage.load();
       expect(restored.soundVolume, 0.35);
       expect(restored.hapticsEnabled, isFalse);
+      expect(restored.language, AppLanguage.portuguese);
     },
   );
 
   testWidgets('updates volume and vibration in settings', (tester) async {
     final storage = _InMemoryGameSettingsStorage();
+    AppLanguage? selectedLanguage;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -247,6 +266,7 @@ void main() {
         home: SettingsScreen(
           initialSettings: const GameSettings(),
           settingsStorage: storage,
+          onSettingsChanged: (settings) => selectedLanguage = settings.language,
         ),
       ),
     );
@@ -261,11 +281,18 @@ void main() {
     await tester.pump();
     await tester.tap(find.byType(Switch));
     await tester.pump();
+    final languagePicker = tester.widget<DropdownButton<AppLanguage>>(
+      find.byType(DropdownButton<AppLanguage>),
+    );
+    languagePicker.onChanged!(AppLanguage.portuguese);
+    await tester.pump();
 
     expect(find.text('35%'), findsOneWidget);
     expect(find.text('OFF'), findsOneWidget);
     expect(storage.settings.soundVolume, 0.35);
     expect(storage.settings.hapticsEnabled, isFalse);
+    expect(storage.settings.language, AppLanguage.portuguese);
+    expect(selectedLanguage, AppLanguage.portuguese);
   });
 
   test('interpolates the background from daylight to night', () {

@@ -37,6 +37,7 @@ class BlockyGameController extends ChangeNotifier {
   int _perfectStreak = 0;
   int _perfectSpeedReliefCount = 0;
   bool _isShowingPerfect = false;
+  bool _isShowingPerfectRecoveryFeedback = false;
   String _perfectFeedbackText = 'PERFECT!';
   Timer? _perfectFeedbackTimer;
   bool _isDisposed = false;
@@ -55,6 +56,8 @@ class BlockyGameController extends ChangeNotifier {
   bool get isPerfectRecoveryReady =>
       _perfectStreak >= GameConfig.perfectStreakForRecovery;
   bool get isShowingPerfect => _isShowingPerfect;
+  bool get isShowingPerfectRecoveryFeedback =>
+      _isShowingPerfectRecoveryFeedback;
   String get perfectFeedbackText => _perfectFeedbackText;
   double get movingBlockSpeed {
     final progressionSpeed = GameConfig.movingBlockSpeedForScore(_score);
@@ -169,8 +172,10 @@ class BlockyGameController extends ChangeNotifier {
         ? 'PERFECT! x$_perfectStreak'
         : 'PERFECT!';
     _isShowingPerfect = true;
+    _isShowingPerfectRecoveryFeedback = false;
     _perfectFeedbackTimer = Timer(_perfectFeedbackDuration, () {
       _isShowingPerfect = false;
+      _isShowingPerfectRecoveryFeedback = false;
       _perfectFeedbackTimer = null;
       notifyListeners();
     });
@@ -180,10 +185,12 @@ class BlockyGameController extends ChangeNotifier {
     _perfectFeedbackTimer?.cancel();
     _perfectFeedbackText = 'PERFECT RECOVERY!';
     _isShowingPerfect = true;
+    _isShowingPerfectRecoveryFeedback = true;
     _perfectFeedbackTimer = Timer(
       GameConfig.perfectRecoveryFeedbackDuration,
       () {
         _isShowingPerfect = false;
+        _isShowingPerfectRecoveryFeedback = false;
         _perfectFeedbackTimer = null;
         notifyListeners();
       },
@@ -194,6 +201,7 @@ class BlockyGameController extends ChangeNotifier {
     _perfectFeedbackTimer?.cancel();
     _perfectFeedbackTimer = null;
     _isShowingPerfect = false;
+    _isShowingPerfectRecoveryFeedback = false;
   }
 
   Future<void> _persistBestScore(int score) async {

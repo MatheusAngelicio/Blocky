@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:blocky/app/arcade_colors.dart';
 import 'package:blocky/app/arcade_design_system.dart';
 import 'package:blocky/app/blocky_colors.dart';
+import 'package:blocky/app/blocky_localizations.dart';
 import 'package:blocky/audio/asset_game_sound_player.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_sound.dart';
@@ -53,6 +54,7 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       backgroundColor: BlockyColors.initialSky,
       body: GestureDetector(
@@ -74,7 +76,7 @@ class _GameScreenState extends State<GameScreen> {
                   child: Align(
                     alignment: Alignment.topCenter,
                     child: ArcadeStat(
-                      label: 'SCORE',
+                      label: l10n.score,
                       value: '${_gameController.score}',
                       accent: ArcadeColors.primary,
                       padding: const EdgeInsets.symmetric(
@@ -107,7 +109,11 @@ class _GameScreenState extends State<GameScreen> {
                           ),
                           shadowOffset: const Offset(3, 4),
                           child: Text(
-                            _gameController.perfectFeedbackText,
+                            l10n.perfectFeedback(
+                              streak: _gameController.perfectStreak,
+                              isRecovery: _gameController
+                                  .isShowingPerfectRecoveryFeedback,
+                            ),
                             textAlign: TextAlign.center,
                             style: ArcadeTypography.heading.copyWith(
                               color: BlockyColors.perfectText,
@@ -145,8 +151,8 @@ class _GameScreenState extends State<GameScreen> {
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              const Text(
-                                'GAME OVER',
+                              Text(
+                                l10n.gameOver,
                                 style: ArcadeTypography.heading,
                               ),
                               const SizedBox(height: 24),
@@ -156,7 +162,7 @@ class _GameScreenState extends State<GameScreen> {
                                   SizedBox(
                                     width: 110,
                                     child: ArcadeStat(
-                                      label: 'SCORE',
+                                      label: l10n.score,
                                       value: '${_gameController.score}',
                                       valueStyle: ArcadeTypography.value
                                           .copyWith(fontSize: 40),
@@ -166,7 +172,7 @@ class _GameScreenState extends State<GameScreen> {
                                   SizedBox(
                                     width: 110,
                                     child: ArcadeStat(
-                                      label: 'BEST',
+                                      label: l10n.best,
                                       value: '${_gameController.bestScore}',
                                       accent: ArcadeColors.strongOutline,
                                       valueStyle: ArcadeTypography.value
@@ -177,7 +183,9 @@ class _GameScreenState extends State<GameScreen> {
                               ),
                               const SizedBox(height: 18),
                               Text(
-                                '+ ${_gameController.coinsEarnedThisGame} BLOCKY COINS',
+                                l10n.coinsEarned(
+                                  _gameController.coinsEarnedThisGame,
+                                ),
                                 style: ArcadeTypography.button.copyWith(
                                   color: ArcadeColors.primary,
                                   fontSize: 13,
@@ -186,12 +194,12 @@ class _GameScreenState extends State<GameScreen> {
                               ),
                               const SizedBox(height: 28),
                               ArcadeButton(
-                                label: 'PLAY AGAIN',
+                                label: l10n.playAgain,
                                 onPressed: _gameController.restartGame,
                               ),
                               const SizedBox(height: 12),
                               ArcadeButton(
-                                label: 'HOME',
+                                label: l10n.home,
                                 color: ArcadeColors.strongOutline,
                                 foregroundColor: ArcadeColors.ink,
                                 onPressed: () => Navigator.of(context).pop(),

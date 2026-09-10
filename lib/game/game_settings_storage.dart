@@ -8,6 +8,7 @@ class GameSettingsStorage {
 
   static const _soundVolumeKey = 'sound_volume';
   static const _hapticsEnabledKey = 'haptics_enabled';
+  static const _languageKey = 'app_language';
 
   SharedPreferencesAsync? _preferences;
 
@@ -20,11 +21,14 @@ class GameSettingsStorage {
       final hapticsEnabled = await _activePreferences.getBool(
         _hapticsEnabledKey,
       );
+      final languageName = await _activePreferences.getString(_languageKey);
       return GameSettings(
         soundVolume: (volume ?? GameSettings.defaultSoundVolume)
             .clamp(0.0, 1.0)
             .toDouble(),
         hapticsEnabled: hapticsEnabled ?? true,
+        language:
+            AppLanguage.values.asNameMap()[languageName] ?? AppLanguage.system,
       );
     } catch (_) {
       return const GameSettings();
@@ -36,6 +40,7 @@ class GameSettingsStorage {
       await Future.wait([
         _activePreferences.setDouble(_soundVolumeKey, settings.soundVolume),
         _activePreferences.setBool(_hapticsEnabledKey, settings.hapticsEnabled),
+        _activePreferences.setString(_languageKey, settings.language.name),
       ]);
     } catch (_) {
       // Preferências são opcionais e não devem bloquear a navegação.

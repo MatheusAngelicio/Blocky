@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:blocky/app/arcade_colors.dart';
 import 'package:blocky/app/arcade_design_system.dart';
 import 'package:blocky/app/blocky_colors.dart';
+import 'package:blocky/app/blocky_localizations.dart';
 import 'package:blocky/game/best_score_storage.dart';
 import 'package:blocky/game/blocky_coin_storage.dart';
 import 'package:blocky/game/block_theme.dart';
@@ -14,7 +15,9 @@ import 'package:flutter/material.dart';
 
 /// Tela inicial da partida e seleção visual do tema de bloco.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.onSettingsChanged});
+
+  final ValueChanged<GameSettings>? onSettingsChanged;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -51,6 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _selectedTheme = results[2] as BlockTheme;
       _gameSettings = results[3] as GameSettings;
     });
+    widget.onSettingsChanged?.call(_gameSettings);
   }
 
   Future<void> _refreshGameStats() async {
@@ -96,10 +100,14 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (_) => SettingsScreen(
           initialSettings: _gameSettings,
           settingsStorage: _gameSettingsStorage,
+          onSettingsChanged: widget.onSettingsChanged,
         ),
       ),
     );
-    if (settings != null && mounted) setState(() => _gameSettings = settings);
+    if (settings == null || !mounted) return;
+
+    setState(() => _gameSettings = settings);
+    widget.onSettingsChanged?.call(settings);
   }
 
   @override
@@ -143,6 +151,7 @@ class _HomeContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeColor = BlockyColors.themeAccent(selectedTheme);
+    final l10n = context.l10n;
 
     return Center(
       child: ConstrainedBox(
@@ -153,22 +162,26 @@ class _HomeContent extends StatelessWidget {
             children: [
               const Text('BLOCKY', style: ArcadeTypography.logo),
               const SizedBox(height: 8),
-              const Text('STACK IT UP', style: ArcadeTypography.tagline),
+              Text(l10n.tagline, style: ArcadeTypography.tagline),
               const SizedBox(height: 26),
               _HomeStats(blockyCoins: blockyCoins, bestScore: bestScore),
               const SizedBox(height: 24),
               _ThemePreview(theme: selectedTheme, accent: themeColor),
               const SizedBox(height: 28),
-              ArcadeButton(label: 'PLAY', color: themeColor, onPressed: onPlay),
+              ArcadeButton(
+                label: l10n.play,
+                color: themeColor,
+                onPressed: onPlay,
+              ),
               const SizedBox(height: 14),
               ArcadeButton(
-                label: 'BLOCK THEME',
+                label: l10n.blockTheme,
                 color: ArcadeColors.strongOutline,
                 onPressed: onChooseTheme,
               ),
               const SizedBox(height: 14),
               ArcadeButton(
-                label: 'SETTINGS',
+                label: l10n.settings,
                 color: ArcadeColors.outline,
                 onPressed: onOpenSettings,
               ),
@@ -188,14 +201,15 @@ class _HomeStats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Row(
       children: [
         Expanded(
-          child: ArcadeStat(label: 'BLOCKY COINS', value: '$blockyCoins'),
+          child: ArcadeStat(label: l10n.blockyCoins, value: '$blockyCoins'),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: ArcadeStat(label: 'BEST', value: '$bestScore'),
+          child: ArcadeStat(label: l10n.best, value: '$bestScore'),
         ),
       ],
     );
@@ -210,6 +224,7 @@ class _ThemePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return SizedBox(
       width: double.infinity,
       child: ArcadePanel(
@@ -220,7 +235,7 @@ class _ThemePreview extends StatelessWidget {
         child: Column(
           children: [
             Text(
-              'CURRENT SET · ${_themeName(theme).toUpperCase()}',
+              '${l10n.currentSet} · ${l10n.themeName(theme).toUpperCase()}',
               style: ArcadeTypography.label.copyWith(
                 color: accent,
                 fontSize: 12,
@@ -249,6 +264,7 @@ class _ThemeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return LayoutBuilder(
       builder: (context, constraints) => SafeArea(
         child: SizedBox(
@@ -258,8 +274,8 @@ class _ThemeSelector extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'CHOOSE BLOCK THEME',
+                Text(
+                  l10n.chooseBlockTheme,
                   textAlign: TextAlign.center,
                   style: ArcadeTypography.heading,
                 ),
@@ -301,6 +317,7 @@ class _ThemeOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = BlockyColors.themeAccent(theme);
+    final l10n = context.l10n;
     return Material(
       color: selected ? color.withValues(alpha: 0.2) : ArcadeColors.transparent,
       child: InkWell(
@@ -320,7 +337,7 @@ class _ThemeOption extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  _themeName(theme).toUpperCase(),
+                  l10n.themeName(theme).toUpperCase(),
                   style: ArcadeTypography.button.copyWith(
                     color: ArcadeColors.white,
                   ),
@@ -328,7 +345,7 @@ class _ThemeOption extends StatelessWidget {
               ),
               if (selected)
                 Text(
-                  'SELECTED',
+                  l10n.selected,
                   style: ArcadeTypography.label.copyWith(fontSize: 8),
                 ),
             ],
@@ -817,15 +834,6 @@ void _drawNeonPreviewLine(
       ..strokeWidth = math.max(1.0, strokeWidth),
   );
 }
-
-String _themeName(BlockTheme theme) => switch (theme) {
-  BlockTheme.classic => 'Classic',
-  BlockTheme.jelly => 'Jelly',
-  BlockTheme.chocolate => 'Chocolate',
-  BlockTheme.cheese => 'Cheese',
-  BlockTheme.neon => 'Neon',
-  BlockTheme.lego => 'Lego',
-};
 
 Color _lighten(Color color, double amount) {
   return Color.lerp(color, ArcadeColors.white, amount)!;

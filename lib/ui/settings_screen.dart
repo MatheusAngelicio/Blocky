@@ -73,151 +73,165 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: ArcadeColors.canvas,
         body: ArcadeBackdrop(
           child: SafeArea(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 520),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: IconButton(
-                            onPressed: _close,
-                            color: ArcadeColors.white,
-                            icon: const Icon(Icons.arrow_back),
-                            tooltip: l10n.back,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          l10n.settings,
-                          textAlign: TextAlign.center,
-                          style: ArcadeTypography.heading,
-                        ),
-                        const SizedBox(height: 28),
-                        ArcadePanel(
-                          accent: ArcadeColors.primary,
-                          padding: const EdgeInsets.all(18),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 520),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+                        child: SingleChildScrollView(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              const SizedBox(height: 56),
                               Text(
-                                l10n.soundVolume,
-                                style: ArcadeTypography.button.copyWith(
-                                  color: ArcadeColors.white,
+                                l10n.settings,
+                                textAlign: TextAlign.center,
+                                style: ArcadeTypography.heading,
+                              ),
+                              const SizedBox(height: 28),
+                              ArcadePanel(
+                                accent: ArcadeColors.primary,
+                                padding: const EdgeInsets.all(18),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Text(
+                                      l10n.soundVolume,
+                                      style: ArcadeTypography.button.copyWith(
+                                        color: ArcadeColors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      '$volumePercent%',
+                                      style: ArcadeTypography.value.copyWith(
+                                        color: ArcadeColors.primary,
+                                      ),
+                                    ),
+                                    Slider(
+                                      value: _settings.soundVolume,
+                                      onChanged: (volume) => _setSettings(
+                                        _settings.copyWith(soundVolume: volume),
+                                      ),
+                                      onChangeEnd: (_) => _saveSettings(),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '$volumePercent%',
-                                style: ArcadeTypography.value.copyWith(
-                                  color: ArcadeColors.primary,
+                              const SizedBox(height: 18),
+                              ArcadePanel(
+                                accent: ArcadeColors.secondary,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 10,
                                 ),
-                              ),
-                              Slider(
-                                value: _settings.soundVolume,
-                                onChanged: (volume) => _setSettings(
-                                  _settings.copyWith(soundVolume: volume),
-                                ),
-                                onChangeEnd: (_) => _saveSettings(),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        ArcadePanel(
-                          accent: ArcadeColors.secondary,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 10,
-                          ),
-                          child: Material(
-                            color: ArcadeColors.transparent,
-                            child: SwitchListTile.adaptive(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(
-                                l10n.vibration,
-                                style: ArcadeTypography.button.copyWith(
-                                  color: ArcadeColors.white,
-                                ),
-                              ),
-                              subtitle: Text(
-                                _settings.hapticsEnabled ? l10n.on : l10n.off,
-                                style: ArcadeTypography.label.copyWith(
-                                  color: _settings.hapticsEnabled
-                                      ? ArcadeColors.secondary
-                                      : ArcadeColors.muted,
-                                ),
-                              ),
-                              value: _settings.hapticsEnabled,
-                              onChanged: (enabled) {
-                                _setSettings(
-                                  _settings.copyWith(hapticsEnabled: enabled),
-                                );
-                                _saveSettings();
-                              },
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        ArcadePanel(
-                          accent: ArcadeColors.strongOutline,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 10,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Text(
-                                l10n.language,
-                                style: ArcadeTypography.button.copyWith(
-                                  color: ArcadeColors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              DropdownButtonHideUnderline(
-                                child: DropdownButton<AppLanguage>(
-                                  value: _settings.language,
-                                  isExpanded: true,
-                                  dropdownColor: ArcadeColors.elevatedSurface,
-                                  style: ArcadeTypography.label.copyWith(
-                                    color: ArcadeColors.white,
-                                  ),
-                                  items: AppLanguage.values
-                                      .map(
-                                        (language) => DropdownMenuItem(
-                                          value: language,
-                                          child: Text(
-                                            l10n.languageName(language),
-                                          ),
+                                child: Material(
+                                  color: ArcadeColors.transparent,
+                                  child: SwitchListTile.adaptive(
+                                    contentPadding: EdgeInsets.zero,
+                                    title: Text(
+                                      l10n.vibration,
+                                      style: ArcadeTypography.button.copyWith(
+                                        color: ArcadeColors.white,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      _settings.hapticsEnabled
+                                          ? l10n.on
+                                          : l10n.off,
+                                      style: ArcadeTypography.label.copyWith(
+                                        color: _settings.hapticsEnabled
+                                            ? ArcadeColors.secondary
+                                            : ArcadeColors.muted,
+                                      ),
+                                    ),
+                                    value: _settings.hapticsEnabled,
+                                    onChanged: (enabled) {
+                                      _setSettings(
+                                        _settings.copyWith(
+                                          hapticsEnabled: enabled,
                                         ),
-                                      )
-                                      .toList(),
-                                  onChanged: (language) {
-                                    if (language != null) {
-                                      _changeLanguage(language);
-                                    }
-                                  },
+                                      );
+                                      _saveSettings();
+                                    },
+                                  ),
                                 ),
+                              ),
+                              const SizedBox(height: 18),
+                              ArcadePanel(
+                                accent: ArcadeColors.strongOutline,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 10,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Text(
+                                      l10n.language,
+                                      style: ArcadeTypography.button.copyWith(
+                                        color: ArcadeColors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    DropdownButtonHideUnderline(
+                                      child: DropdownButton<AppLanguage>(
+                                        value: _settings.language,
+                                        isExpanded: true,
+                                        dropdownColor:
+                                            ArcadeColors.elevatedSurface,
+                                        style: ArcadeTypography.label.copyWith(
+                                          color: ArcadeColors.white,
+                                        ),
+                                        items: AppLanguage.values
+                                            .map(
+                                              (language) => DropdownMenuItem(
+                                                value: language,
+                                                child: Text(
+                                                  l10n.languageName(language),
+                                                ),
+                                              ),
+                                            )
+                                            .toList(),
+                                        onChanged: (language) {
+                                          if (language != null) {
+                                            _changeLanguage(language);
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 28),
+                              ArcadeButton(
+                                label: l10n.done,
+                                onPressed: _close,
+                                color: ArcadeColors.primary,
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 28),
-                        ArcadeButton(
-                          label: l10n.done,
-                          onPressed: _close,
-                          color: ArcadeColors.primary,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ),
+                Positioned(
+                  top: 4,
+                  left: 24,
+                  child: IconButton(
+                    onPressed: _close,
+                    color: ArcadeColors.white,
+                    icon: const Icon(Icons.arrow_back),
+                    tooltip: l10n.back,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

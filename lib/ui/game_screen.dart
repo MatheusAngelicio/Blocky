@@ -6,14 +6,20 @@ import 'package:blocky/app/blocky_colors.dart';
 import 'package:blocky/audio/asset_game_sound_player.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/game_sound.dart';
+import 'package:blocky/game/game_settings.dart';
 import 'package:blocky/game/block_theme.dart';
 import 'package:blocky/scene/blocky_scene.dart';
 import 'package:flutter/material.dart';
 
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key, this.blockTheme = BlockTheme.jelly});
+  const GameScreen({
+    super.key,
+    this.blockTheme = BlockTheme.jelly,
+    this.settings = const GameSettings(),
+  });
 
   final BlockTheme blockTheme;
+  final GameSettings settings;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -27,7 +33,7 @@ class _GameScreenState extends State<GameScreen> {
   void initState() {
     super.initState();
     _gameController = BlockyGameController();
-    _soundPlayer = AssetGameSoundPlayer();
+    _soundPlayer = AssetGameSoundPlayer(volume: widget.settings.soundVolume);
     _gameController.addListener(_onGameStateChanged);
     unawaited(_gameController.loadBestScore());
     unawaited(_gameController.loadBlockyCoins());
@@ -59,6 +65,7 @@ class _GameScreenState extends State<GameScreen> {
               gameController: _gameController,
               soundPlayer: _soundPlayer,
               blockTheme: widget.blockTheme,
+              hapticsEnabled: widget.settings.hapticsEnabled,
             ),
             IgnorePointer(
               child: SafeArea(

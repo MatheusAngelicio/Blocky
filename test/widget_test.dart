@@ -9,12 +9,16 @@ import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/best_score_storage.dart';
 import 'package:blocky/game/game_config.dart';
 import 'package:blocky/game/game_haptics.dart';
+import 'package:blocky/game/game_settings.dart';
+import 'package:blocky/game/game_settings_storage.dart';
 import 'package:blocky/game/game_sound.dart';
 import 'package:blocky/scene/block_theme_visual.dart';
 import 'package:blocky/scene/sky_progression.dart';
 import 'package:blocky/app/arcade_colors.dart';
 import 'package:blocky/app/arcade_design_system.dart';
 import 'package:blocky/app/blocky_app.dart';
+import 'package:blocky/ui/settings_screen.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -29,6 +33,7 @@ void main() {
     expect(find.text('BEST'), findsOneWidget);
     expect(find.text('PLAY'), findsOneWidget);
     expect(find.text('BLOCK THEME'), findsOneWidget);
+    expect(find.text('SETTINGS'), findsOneWidget);
   });
 
   test('uses the shared pixel arcade design system', () {
@@ -210,6 +215,57 @@ void main() {
     await storage.save(BlockTheme.chocolate);
 
     expect(await storage.load(), BlockTheme.chocolate);
+  });
+
+  test(
+    'restores presentation settings with sound and haptics enabled',
+    () async {
+      final storage = _InMemoryGameSettingsStorage();
+
+      expect(await storage.load(), isA<GameSettings>());
+      expect(
+        (await storage.load()).soundVolume,
+        GameSettings.defaultSoundVolume,
+      );
+      expect((await storage.load()).hapticsEnabled, isTrue);
+
+      const settings = GameSettings(soundVolume: 0.35, hapticsEnabled: false);
+      await storage.save(settings);
+
+      final restored = await storage.load();
+      expect(restored.soundVolume, 0.35);
+      expect(restored.hapticsEnabled, isFalse);
+    },
+  );
+
+  testWidgets('updates volume and vibration in settings', (tester) async {
+    final storage = _InMemoryGameSettingsStorage();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ArcadeTheme.dark(),
+        home: SettingsScreen(
+          initialSettings: const GameSettings(),
+          settingsStorage: storage,
+        ),
+      ),
+    );
+
+    expect(find.text('SETTINGS'), findsOneWidget);
+    expect(find.text('100%'), findsOneWidget);
+    expect(find.text('ON'), findsOneWidget);
+
+    final slider = tester.widget<Slider>(find.byType(Slider));
+    slider.onChanged!(0.35);
+    slider.onChangeEnd!(0.35);
+    await tester.pump();
+    await tester.tap(find.byType(Switch));
+    await tester.pump();
+
+    expect(find.text('35%'), findsOneWidget);
+    expect(find.text('OFF'), findsOneWidget);
+    expect(storage.settings.soundVolume, 0.35);
+    expect(storage.settings.hapticsEnabled, isFalse);
   });
 
   test('interpolates the background from daylight to night', () {
@@ -669,5 +725,17 @@ class _InMemoryBlockThemeStorage extends BlockThemeStorage {
   @override
   Future<void> save(BlockTheme theme) async {
     selectedTheme = theme;
+  }
+}
+
+class _InMemoryGameSettingsStorage extends GameSettingsStorage {
+  GameSettings settings = const GameSettings();
+
+  @override
+  Future<GameSettings> load() async => settings;
+
+  @override
+  Future<void> save(GameSettings settings) async {
+    this.settings = settings;
   }
 }

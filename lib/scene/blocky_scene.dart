@@ -25,11 +25,13 @@ class BlockyScene extends StatefulWidget {
     required this.gameController,
     required this.soundPlayer,
     required this.blockTheme,
+    this.hapticsEnabled = true,
   });
 
   final BlockyGameController gameController;
   final GameSoundPlayer soundPlayer;
   final BlockTheme blockTheme;
+  final bool hapticsEnabled;
 
   @override
   State<BlockyScene> createState() => _BlockySceneState();
@@ -339,7 +341,9 @@ class _BlockySceneState extends State<BlockyScene> {
     if (!placement.hasOverlap) {
       _movingBlock.visible = false;
       widget.gameController.endGame();
-      GameHaptics.trigger(GameHapticEvent.gameOver);
+      if (widget.hapticsEnabled) {
+        GameHaptics.trigger(GameHapticEvent.gameOver);
+      }
       widget.soundPlayer.play(_blockThemeVisual.sounds.gameOver);
       return;
     }
@@ -395,13 +399,15 @@ class _BlockySceneState extends State<BlockyScene> {
         );
         _feedbackController.playPerfectWobble(_movingBlock);
       }
-      GameHaptics.trigger(
-        recovered
-            ? GameHapticEvent.perfectRecovery
-            : placement.isPerfect
-            ? GameHapticEvent.perfect
-            : GameHapticEvent.placement,
-      );
+      if (widget.hapticsEnabled) {
+        GameHaptics.trigger(
+          recovered
+              ? GameHapticEvent.perfectRecovery
+              : placement.isPerfect
+              ? GameHapticEvent.perfect
+              : GameHapticEvent.placement,
+        );
+      }
       widget.soundPlayer.play(
         recovered
             ? _blockThemeVisual.sounds.perfectRecovery

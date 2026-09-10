@@ -6,7 +6,10 @@ import 'package:blocky/game/best_score_storage.dart';
 import 'package:blocky/game/blocky_coin_storage.dart';
 import 'package:blocky/game/block_theme.dart';
 import 'package:blocky/game/block_theme_storage.dart';
+import 'package:blocky/game/game_settings.dart';
+import 'package:blocky/game/game_settings_storage.dart';
 import 'package:blocky/ui/game_screen.dart';
+import 'package:blocky/ui/settings_screen.dart';
 import 'package:flutter/material.dart';
 
 /// Tela inicial da partida e seleção visual do tema de bloco.
@@ -21,7 +24,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final BestScoreStorage _bestScoreStorage = BestScoreStorage();
   final BlockyCoinStorage _blockyCoinStorage = BlockyCoinStorage();
   final BlockThemeStorage _blockThemeStorage = BlockThemeStorage();
+  final GameSettingsStorage _gameSettingsStorage = GameSettingsStorage();
   BlockTheme _selectedTheme = BlockTheme.jelly;
+  GameSettings _gameSettings = const GameSettings();
   int _bestScore = 0;
   int _blockyCoins = 0;
 
@@ -36,6 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _bestScoreStorage.load(),
       _blockyCoinStorage.load(),
       _blockThemeStorage.load(),
+      _gameSettingsStorage.load(),
     ]);
     if (!mounted) return;
 
@@ -43,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _bestScore = results[0] as int;
       _blockyCoins = results[1] as int;
       _selectedTheme = results[2] as BlockTheme;
+      _gameSettings = results[3] as GameSettings;
     });
   }
 
@@ -62,7 +69,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _startGame() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => GameScreen(blockTheme: _selectedTheme),
+        builder: (_) =>
+            GameScreen(blockTheme: _selectedTheme, settings: _gameSettings),
       ),
     );
     if (mounted) _refreshGameStats();
@@ -82,6 +90,18 @@ class _HomeScreenState extends State<HomeScreen> {
     await _blockThemeStorage.save(selectedTheme);
   }
 
+  Future<void> _showSettings() async {
+    final settings = await Navigator.of(context).push<GameSettings>(
+      MaterialPageRoute<GameSettings>(
+        builder: (_) => SettingsScreen(
+          initialSettings: _gameSettings,
+          settingsStorage: _gameSettingsStorage,
+        ),
+      ),
+    );
+    if (settings != null && mounted) setState(() => _gameSettings = settings);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -94,6 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
             blockyCoins: _blockyCoins,
             onPlay: _startGame,
             onChooseTheme: _showThemeSelector,
+            onOpenSettings: _showSettings,
           ),
         ),
       ),
@@ -109,6 +130,7 @@ class _HomeContent extends StatelessWidget {
     required this.blockyCoins,
     required this.onPlay,
     required this.onChooseTheme,
+    required this.onOpenSettings,
   });
 
   final BlockTheme selectedTheme;
@@ -116,6 +138,7 @@ class _HomeContent extends StatelessWidget {
   final int blockyCoins;
   final VoidCallback onPlay;
   final VoidCallback onChooseTheme;
+  final VoidCallback onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -142,6 +165,12 @@ class _HomeContent extends StatelessWidget {
                 label: 'BLOCK THEME',
                 color: ArcadeColors.strongOutline,
                 onPressed: onChooseTheme,
+              ),
+              const SizedBox(height: 14),
+              ArcadeButton(
+                label: 'SETTINGS',
+                color: ArcadeColors.outline,
+                onPressed: onOpenSettings,
               ),
             ],
           ),

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:blocky/game/game_sound.dart';
+import 'package:blocky/game/game_settings.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -23,11 +24,15 @@ abstract final class GameSoundAssets {
 /// Enquanto um asset ainda não existir, o som correspondente é ignorado sem
 /// interromper a partida e não volta a ser procurado nesta execução.
 class AssetGameSoundPlayer implements GameSoundPlayer {
+  AssetGameSoundPlayer({double volume = GameSettings.defaultSoundVolume})
+    : _volume = volume.clamp(0.0, 1.0).toDouble();
+
   final Map<GameSound, AudioPlayer> _players = {
     for (final sound in GameSound.values) sound: AudioPlayer(),
   };
   final Set<GameSound> _availableSounds = {};
   final Set<GameSound> _unavailableSounds = {};
+  final double _volume;
   bool _isDisposed = false;
 
   @override
@@ -50,7 +55,9 @@ class AssetGameSoundPlayer implements GameSoundPlayer {
     }
 
     try {
-      await _players[sound]!.play(AssetSource(GameSoundAssets.pathFor(sound)));
+      final player = _players[sound]!;
+      await player.setVolume(_volume);
+      await player.play(AssetSource(GameSoundAssets.pathFor(sound)));
     } on AudioPlayerException {
       // A ausência ou falha de um efeito não deve interromper a partida.
     }

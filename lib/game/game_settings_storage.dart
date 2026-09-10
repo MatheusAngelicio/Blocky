@@ -1,0 +1,44 @@
+import 'package:blocky/game/game_settings.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Persiste as preferências locais de apresentação do jogador.
+class GameSettingsStorage {
+  GameSettingsStorage({SharedPreferencesAsync? preferences})
+    : _preferences = preferences;
+
+  static const _soundVolumeKey = 'sound_volume';
+  static const _hapticsEnabledKey = 'haptics_enabled';
+
+  SharedPreferencesAsync? _preferences;
+
+  SharedPreferencesAsync get _activePreferences =>
+      _preferences ??= SharedPreferencesAsync();
+
+  Future<GameSettings> load() async {
+    try {
+      final volume = await _activePreferences.getDouble(_soundVolumeKey);
+      final hapticsEnabled = await _activePreferences.getBool(
+        _hapticsEnabledKey,
+      );
+      return GameSettings(
+        soundVolume: (volume ?? GameSettings.defaultSoundVolume)
+            .clamp(0.0, 1.0)
+            .toDouble(),
+        hapticsEnabled: hapticsEnabled ?? true,
+      );
+    } catch (_) {
+      return const GameSettings();
+    }
+  }
+
+  Future<void> save(GameSettings settings) async {
+    try {
+      await Future.wait([
+        _activePreferences.setDouble(_soundVolumeKey, settings.soundVolume),
+        _activePreferences.setBool(_hapticsEnabledKey, settings.hapticsEnabled),
+      ]);
+    } catch (_) {
+      // Preferências são opcionais e não devem bloquear a navegação.
+    }
+  }
+}

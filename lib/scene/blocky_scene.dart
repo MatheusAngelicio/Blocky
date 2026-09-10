@@ -26,23 +26,20 @@ class BlockyScene extends StatefulWidget {
     required this.soundPlayer,
     required this.blockTheme,
     this.hapticsEnabled = true,
+    this.cameraAngle = 0.0,
   });
 
   final BlockyGameController gameController;
   final GameSoundPlayer soundPlayer;
   final BlockTheme blockTheme;
   final bool hapticsEnabled;
+  final double cameraAngle;
 
   @override
   State<BlockyScene> createState() => _BlockySceneState();
 }
 
 class _BlockySceneState extends State<BlockyScene> {
-  static const _initialCameraPositionX = -7.0;
-  static const _initialCameraPositionY = 9.4;
-  static const _initialCameraPositionZ = -12.5;
-  static const _initialCameraTargetY = 1.55;
-
   final Scene _scene = Scene();
   final BlockTower _tower = BlockTower();
   late final BlockThemeVisual _blockThemeVisual;
@@ -61,11 +58,11 @@ class _BlockySceneState extends State<BlockyScene> {
     // Ajuste target.y para o enquadramento vertical: aumente-o para fazer os
     // blocos aparecerem mais abaixo na tela; diminua-o para fazê-los subir.
     position: vm.Vector3(
-      _initialCameraPositionX,
-      _initialCameraPositionY,
-      _initialCameraPositionZ,
+      GameConfig.cameraInitialPositionX,
+      GameConfig.cameraInitialPositionY,
+      GameConfig.cameraInitialPositionZ,
     ),
-    target: vm.Vector3(0.0, _initialCameraTargetY, 0.0),
+    target: vm.Vector3(0.0, GameConfig.cameraInitialTargetY, 0.0),
   );
 
   bool _isReady = false;
@@ -280,11 +277,11 @@ class _BlockySceneState extends State<BlockyScene> {
 
   void _resetCamera() {
     _camera.position = vm.Vector3(
-      _initialCameraPositionX,
-      _initialCameraPositionY,
-      _initialCameraPositionZ,
+      GameConfig.cameraPositionXForAngle(widget.cameraAngle),
+      GameConfig.cameraInitialPositionY,
+      GameConfig.cameraPositionZForAngle(widget.cameraAngle),
     );
-    _camera.target = vm.Vector3(0.0, _initialCameraTargetY, 0.0);
+    _camera.target = vm.Vector3(0.0, GameConfig.cameraInitialTargetY, 0.0);
   }
 
   void _updateBackgroundStars(double deltaSeconds) {
@@ -514,11 +511,13 @@ class _BlockySceneState extends State<BlockyScene> {
         1 - math.exp(-GameConfig.cameraFollowSpeed * deltaSeconds);
     final horizontalInterpolation =
         1 - math.exp(-GameConfig.cameraHorizontalFollowSpeed * deltaSeconds);
-    final desiredPositionX = _initialCameraPositionX + _tower.centerX;
-    final desiredPositionY = _initialCameraPositionY + _tower.topY;
-    final desiredPositionZ = _initialCameraPositionZ + _tower.centerZ;
+    final desiredPositionX =
+        GameConfig.cameraPositionXForAngle(widget.cameraAngle) + _tower.centerX;
+    final desiredPositionY = GameConfig.cameraInitialPositionY + _tower.topY;
+    final desiredPositionZ =
+        GameConfig.cameraPositionZForAngle(widget.cameraAngle) + _tower.centerZ;
     final desiredTargetX = _tower.centerX;
-    final desiredTargetY = _initialCameraTargetY + _tower.topY;
+    final desiredTargetY = GameConfig.cameraInitialTargetY + _tower.topY;
     final desiredTargetZ = _tower.centerZ;
     final position = _camera.position;
     final target = _camera.target;

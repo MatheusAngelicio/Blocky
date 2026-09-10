@@ -27,6 +27,16 @@ class BlockyLocalizations {
   String get soundVolume => _isPortuguese ? 'VOLUME DO SOM' : 'SOUND VOLUME';
   String get vibration => _isPortuguese ? 'VIBRAÇÃO' : 'VIBRATION';
   String get language => _isPortuguese ? 'IDIOMA' : 'LANGUAGE';
+  String get cameraPreview =>
+      _isPortuguese ? 'ÂNGULO DA CÂMERA' : 'CAMERA ANGLE';
+  String get configureCamera =>
+      _isPortuguese ? 'CONFIGURAR CÂMERA' : 'CONFIGURE CAMERA';
+  String get dragCamera =>
+      _isPortuguese ? 'ARRASTE PARA MOVER A CÂMERA' : 'DRAG TO MOVE CAMERA';
+  String get confirmCamera =>
+      _isPortuguese ? 'CONFIRMAR CÂMERA' : 'CONFIRM CAMERA';
+  String get defaultCamera =>
+      _isPortuguese ? 'CÂMERA PADRÃO' : 'DEFAULT CAMERA';
   String get automatic => _isPortuguese ? 'AUTOMÁTICO' : 'AUTOMATIC';
   String get on => _isPortuguese ? 'LIGADA' : 'ON';
   String get off => _isPortuguese ? 'DESLIGADA' : 'OFF';

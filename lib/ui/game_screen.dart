@@ -68,6 +68,7 @@ class _GameScreenState extends State<GameScreen> {
               soundPlayer: _soundPlayer,
               blockTheme: widget.blockTheme,
               hapticsEnabled: widget.settings.hapticsEnabled,
+              cameraAngle: widget.settings.cameraAngle,
             ),
             IgnorePointer(
               child: SafeArea(

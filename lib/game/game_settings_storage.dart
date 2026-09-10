@@ -9,6 +9,7 @@ class GameSettingsStorage {
   static const _soundVolumeKey = 'sound_volume';
   static const _hapticsEnabledKey = 'haptics_enabled';
   static const _languageKey = 'app_language';
+  static const _cameraAngleKey = 'camera_angle';
 
   SharedPreferencesAsync? _preferences;
 
@@ -22,6 +23,7 @@ class GameSettingsStorage {
         _hapticsEnabledKey,
       );
       final languageName = await _activePreferences.getString(_languageKey);
+      final cameraAngle = await _activePreferences.getDouble(_cameraAngleKey);
       return GameSettings(
         soundVolume: (volume ?? GameSettings.defaultSoundVolume)
             .clamp(0.0, 1.0)
@@ -29,6 +31,7 @@ class GameSettingsStorage {
         hapticsEnabled: hapticsEnabled ?? true,
         language:
             AppLanguage.values.asNameMap()[languageName] ?? AppLanguage.system,
+        cameraAngle: (cameraAngle ?? 0.0).clamp(-1.0, 1.0).toDouble(),
       );
     } catch (_) {
       return const GameSettings();
@@ -41,6 +44,7 @@ class GameSettingsStorage {
         _activePreferences.setDouble(_soundVolumeKey, settings.soundVolume),
         _activePreferences.setBool(_hapticsEnabledKey, settings.hapticsEnabled),
         _activePreferences.setString(_languageKey, settings.language.name),
+        _activePreferences.setDouble(_cameraAngleKey, settings.cameraAngle),
       ]);
     } catch (_) {
       // Preferências são opcionais e não devem bloquear a navegação.

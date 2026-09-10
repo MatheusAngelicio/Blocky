@@ -246,6 +246,7 @@ void main() {
         soundVolume: 0.35,
         hapticsEnabled: false,
         language: AppLanguage.portuguese,
+        cameraAngle: 0.4,
       );
       await storage.save(settings);
 
@@ -253,6 +254,7 @@ void main() {
       expect(restored.soundVolume, 0.35);
       expect(restored.hapticsEnabled, isFalse);
       expect(restored.language, AppLanguage.portuguese);
+      expect(restored.cameraAngle, 0.4);
     },
   );
 
@@ -274,6 +276,7 @@ void main() {
     expect(find.text('SETTINGS'), findsOneWidget);
     expect(find.text('100%'), findsOneWidget);
     expect(find.text('ON'), findsOneWidget);
+    expect(find.text('CONFIGURE CAMERA'), findsOneWidget);
 
     final slider = tester.widget<Slider>(find.byType(Slider));
     slider.onChanged!(0.35);
@@ -304,6 +307,21 @@ void main() {
     expect(transition.zenith, isNot(night.zenith));
     expect(night.zenith.x, lessThan(daylight.zenith.x));
     expect(night.zenith.y, lessThan(daylight.zenith.y));
+  });
+
+  test('orbits the camera around the gameplay tower', () {
+    expect(
+      GameConfig.cameraPositionXForAngle(0),
+      GameConfig.cameraInitialPositionX,
+    );
+    expect(
+      GameConfig.cameraPositionZForAngle(0),
+      GameConfig.cameraInitialPositionZ,
+    );
+    expect(
+      GameConfig.cameraPositionXForAngle(-0.6),
+      isNot(GameConfig.cameraPositionXForAngle(0.6)),
+    );
   });
 
   test('adapts the background palette to the selected block theme', () {

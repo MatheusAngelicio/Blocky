@@ -1,8 +1,10 @@
 import 'package:blocky/app/arcade_colors.dart';
 import 'package:blocky/app/arcade_design_system.dart';
 import 'package:blocky/app/blocky_localizations.dart';
+import 'package:blocky/game/block_theme.dart';
 import 'package:blocky/game/game_settings.dart';
 import 'package:blocky/game/game_settings_storage.dart';
+import 'package:blocky/ui/camera_preview_screen.dart';
 import 'package:flutter/material.dart';
 
 /// Configura preferências de apresentação que serão usadas na próxima partida.
@@ -12,11 +14,13 @@ class SettingsScreen extends StatefulWidget {
     required this.initialSettings,
     required this.settingsStorage,
     this.onSettingsChanged,
+    this.previewTheme = BlockTheme.jelly,
   });
 
   final GameSettings initialSettings;
   final GameSettingsStorage settingsStorage;
   final ValueChanged<GameSettings>? onSettingsChanged;
+  final BlockTheme previewTheme;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -44,6 +48,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _setSettings(settings);
     _saveSettings();
     widget.onSettingsChanged?.call(settings);
+  }
+
+  Future<void> _showCameraPreview() async {
+    final cameraAngle = await Navigator.of(context).push<double>(
+      MaterialPageRoute<double>(
+        builder: (_) => CameraPreviewScreen(
+          initialCameraAngle: _settings.cameraAngle,
+          blockTheme: widget.previewTheme,
+        ),
+      ),
+    );
+    if (cameraAngle == null || !mounted) return;
+
+    _setSettings(_settings.copyWith(cameraAngle: cameraAngle));
+    _saveSettings();
   }
 
   Future<void> _close() async {
@@ -207,6 +226,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     ),
                                   ],
                                 ),
+                              ),
+                              const SizedBox(height: 18),
+                              ArcadeButton(
+                                label: l10n.configureCamera,
+                                color: ArcadeColors.outline,
+                                onPressed: _showCameraPreview,
                               ),
                               const SizedBox(height: 28),
                               ArcadeButton(

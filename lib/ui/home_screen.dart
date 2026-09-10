@@ -101,6 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
           initialSettings: _gameSettings,
           settingsStorage: _gameSettingsStorage,
           onSettingsChanged: widget.onSettingsChanged,
+          previewTheme: _selectedTheme,
         ),
       ),
     );

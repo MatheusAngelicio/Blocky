@@ -32,6 +32,11 @@ abstract final class GameConfig {
   static const movingBlockMinimumTravelScale = 0.70;
   static const cameraFollowSpeed = 3.5;
   static const cameraHorizontalFollowSpeed = 7.0;
+  static const cameraInitialPositionX = -7.0;
+  static const cameraInitialPositionY = 9.4;
+  static const cameraInitialPositionZ = -12.5;
+  static const cameraInitialTargetY = 1.55;
+  static const cameraMaximumOrbitRadians = 1.0;
   static const physicsGravity = 9.81;
   static const fallingPieceMass = 0.5;
   static const fallingPieceOutwardSpeed = 1.2;
@@ -98,6 +103,20 @@ abstract final class GameConfig {
 
   static double minimumSpeedAfterPerfectRelief() {
     return movingBlockSpeedForScore(perfectSpeedReliefStartScore);
+  }
+
+  static double cameraPositionXForAngle(double normalizedAngle) {
+    final radians =
+        normalizedAngle.clamp(-1.0, 1.0).toDouble() * cameraMaximumOrbitRadians;
+    return cameraInitialPositionX * math.cos(radians) -
+        cameraInitialPositionZ * math.sin(radians);
+  }
+
+  static double cameraPositionZForAngle(double normalizedAngle) {
+    final radians =
+        normalizedAngle.clamp(-1.0, 1.0).toDouble() * cameraMaximumOrbitRadians;
+    return cameraInitialPositionX * math.sin(radians) +
+        cameraInitialPositionZ * math.cos(radians);
   }
 
   static double movingBlockTravelScale({

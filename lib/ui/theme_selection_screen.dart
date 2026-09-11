@@ -1,7 +1,7 @@
 import 'dart:ui';
 
-import 'package:blocky/app/arcade_colors.dart';
-import 'package:blocky/app/arcade_design_system.dart';
+import 'package:blocky/design_system/arcade_colors.dart';
+import 'package:blocky/design_system/design_system.dart';
 import 'package:blocky/app/blocky_colors.dart';
 import 'package:blocky/app/blocky_localizations.dart';
 import 'package:blocky/game/block_theme.dart';

@@ -7,10 +7,12 @@ import 'package:blocky/game/best_score_storage.dart';
 import 'package:blocky/game/blocky_coin_storage.dart';
 import 'package:blocky/game/block_theme.dart';
 import 'package:blocky/game/block_theme_storage.dart';
+import 'package:blocky/game/block_theme_unlock_storage.dart';
 import 'package:blocky/game/game_settings.dart';
 import 'package:blocky/game/game_settings_storage.dart';
 import 'package:blocky/ui/game_screen.dart';
 import 'package:blocky/ui/settings_screen.dart';
+import 'package:blocky/ui/theme_selection_screen.dart';
 import 'package:flutter/material.dart';
 
 /// Tela inicial da partida e seleção visual do tema de bloco.
@@ -27,8 +29,11 @@ class _HomeScreenState extends State<HomeScreen> {
   final BestScoreStorage _bestScoreStorage = BestScoreStorage();
   final BlockyCoinStorage _blockyCoinStorage = BlockyCoinStorage();
   final BlockThemeStorage _blockThemeStorage = BlockThemeStorage();
+  final BlockThemeUnlockStorage _blockThemeUnlockStorage =
+      BlockThemeUnlockStorage();
   final GameSettingsStorage _gameSettingsStorage = GameSettingsStorage();
-  BlockTheme _selectedTheme = BlockTheme.jelly;
+  BlockTheme _selectedTheme = BlockTheme.classic;
+  Set<BlockTheme> _unlockedThemes = {BlockTheme.classic};
   GameSettings _gameSettings = const GameSettings();
   int _bestScore = 0;
   int _blockyCoins = 0;
@@ -44,15 +49,25 @@ class _HomeScreenState extends State<HomeScreen> {
       _bestScoreStorage.load(),
       _blockyCoinStorage.load(),
       _blockThemeStorage.load(),
+      _blockThemeUnlockStorage.load(),
       _gameSettingsStorage.load(),
     ]);
+    final savedTheme = results[2] as BlockTheme;
+    final unlockedThemes = results[3] as Set<BlockTheme>;
+    final selectedTheme = unlockedThemes.contains(savedTheme)
+        ? savedTheme
+        : BlockTheme.classic;
+    if (selectedTheme != savedTheme) {
+      await _blockThemeStorage.save(selectedTheme);
+    }
     if (!mounted) return;
 
     setState(() {
       _bestScore = results[0] as int;
       _blockyCoins = results[1] as int;
-      _selectedTheme = results[2] as BlockTheme;
-      _gameSettings = results[3] as GameSettings;
+      _selectedTheme = selectedTheme;
+      _unlockedThemes = unlockedThemes;
+      _gameSettings = results[4] as GameSettings;
     });
     widget.onSettingsChanged?.call(_gameSettings);
   }
@@ -81,17 +96,35 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _showThemeSelector() async {
-    final selectedTheme = await showModalBottomSheet<BlockTheme>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: ArcadeColors.elevatedSurface,
-      shape: const RoundedRectangleBorder(),
-      builder: (context) => _ThemeSelector(selectedTheme: _selectedTheme),
+    final selectedTheme = await Navigator.of(context).push<BlockTheme>(
+      MaterialPageRoute<BlockTheme>(
+        builder: (_) => ThemeSelectionScreen(
+          selectedTheme: _selectedTheme,
+          unlockedThemes: _unlockedThemes,
+          blockyCoins: _blockyCoins,
+          blockyCoinStorage: _blockyCoinStorage,
+          unlockStorage: _blockThemeUnlockStorage,
+        ),
+      ),
     );
+    await _refreshThemeCollection();
     if (selectedTheme == null || !mounted) return;
 
     setState(() => _selectedTheme = selectedTheme);
     await _blockThemeStorage.save(selectedTheme);
+  }
+
+  Future<void> _refreshThemeCollection() async {
+    final results = await Future.wait<Object>([
+      _blockyCoinStorage.load(),
+      _blockThemeUnlockStorage.load(),
+    ]);
+    if (!mounted) return;
+
+    setState(() {
+      _blockyCoins = results[0] as int;
+      _unlockedThemes = results[1] as Set<BlockTheme>;
+    });
   }
 
   Future<void> _showSettings() async {
@@ -206,7 +239,11 @@ class _HomeStats extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: ArcadeStat(label: l10n.blockyCoins, value: '$blockyCoins'),
+          child: ArcadeStat(
+            label: l10n.blockyCoins,
+            value: '$blockyCoins',
+            valueWidget: ArcadeCoinAmount(amount: '$blockyCoins'),
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -252,105 +289,6 @@ class _ThemePreview extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ThemeSelector extends StatelessWidget {
-  const _ThemeSelector({required this.selectedTheme});
-
-  final BlockTheme selectedTheme;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return LayoutBuilder(
-      builder: (context, constraints) => SafeArea(
-        child: SizedBox(
-          height: constraints.maxHeight * 0.78,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  l10n.chooseBlockTheme,
-                  textAlign: TextAlign.center,
-                  style: ArcadeTypography.heading,
-                ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: ListView.separated(
-                    itemCount: BlockTheme.values.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final theme = BlockTheme.values[index];
-                      return _ThemeOption(
-                        theme: theme,
-                        selected: theme == selectedTheme,
-                        onTap: () => Navigator.of(context).pop(theme),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ThemeOption extends StatelessWidget {
-  const _ThemeOption({
-    required this.theme,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final BlockTheme theme;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = BlockyColors.themeAccent(theme);
-    final l10n = context.l10n;
-    return Material(
-      color: selected ? color.withValues(alpha: 0.2) : ArcadeColors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            border: Border.all(color: color, width: selected ? 3 : 1),
-          ),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 42,
-                height: 34,
-                child: CustomPaint(painter: _ThemeSwatchPainter(theme)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  l10n.themeName(theme).toUpperCase(),
-                  style: ArcadeTypography.button.copyWith(
-                    color: ArcadeColors.white,
-                  ),
-                ),
-              ),
-              if (selected)
-                Text(
-                  l10n.selected,
-                  style: ArcadeTypography.label.copyWith(fontSize: 8),
-                ),
-            ],
-          ),
         ),
       ),
     );
@@ -572,101 +510,6 @@ void _drawLegoPreviewBlock(
         glint,
       );
     }
-  }
-}
-
-class _ThemeSwatchPainter extends CustomPainter {
-  const _ThemeSwatchPainter(this.theme);
-
-  final BlockTheme theme;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (theme == BlockTheme.lego) {
-      _drawLegoThemeSwatch(canvas, size);
-      return;
-    }
-
-    final color = BlockyColors.themePreviewTower(theme).elementAt(2);
-    _drawPreviewBlock(
-      canvas,
-      theme: theme,
-      color: color,
-      x: 1,
-      y: 4,
-      width: size.width - 6,
-      depth: 7,
-      height: 12,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_ThemeSwatchPainter oldDelegate) =>
-      oldDelegate.theme != theme;
-}
-
-void _drawLegoThemeSwatch(Canvas canvas, Size size) {
-  const color = Color(0xFF2477E7);
-  const x = 3.0;
-  const y = 8.0;
-  final width = size.width - 8;
-  const depth = 6.5;
-  const height = 11.0;
-  final top = Path()
-    ..moveTo(x, y + depth)
-    ..lineTo(x + width * 0.5, y)
-    ..lineTo(x + width, y + depth)
-    ..lineTo(x + width * 0.5, y + depth * 2)
-    ..close();
-  final front = Path()
-    ..moveTo(x, y + depth)
-    ..lineTo(x + width * 0.5, y + depth * 2)
-    ..lineTo(x + width * 0.5, y + depth * 2 + height)
-    ..lineTo(x, y + depth + height)
-    ..close();
-  final side = Path()
-    ..moveTo(x + width, y + depth)
-    ..lineTo(x + width * 0.5, y + depth * 2)
-    ..lineTo(x + width * 0.5, y + depth * 2 + height)
-    ..lineTo(x + width, y + depth + height)
-    ..close();
-
-  canvas.drawPath(
-    front.shift(const Offset(0, 1.5)),
-    Paint()..color = const Color(0xFF0A2358).withValues(alpha: 0.38),
-  );
-  canvas.drawPath(top, Paint()..color = _lighten(color, 0.23));
-  canvas.drawPath(front, Paint()..color = color);
-  canvas.drawPath(side, Paint()..color = _darken(color, 0.3));
-  canvas.drawLine(
-    Offset(x + width * 0.25, y + depth * 1.25),
-    Offset(x + width * 0.25, y + depth * 1.25 + height * 0.72),
-    Paint()
-      ..color = _darken(color, 0.48).withValues(alpha: 0.72)
-      ..strokeWidth = 0.9,
-  );
-
-  final stud = Paint()..color = _lighten(color, 0.16);
-  final studShade = Paint()..color = _darken(color, 0.3);
-  for (final offset in const [
-    Offset(0.36, 0.72),
-    Offset(0.55, 0.53),
-    Offset(0.55, 1.06),
-    Offset(0.74, 0.87),
-  ]) {
-    final center = Offset(x + width * offset.dx, y + depth * offset.dy);
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: center + const Offset(0, 1.1),
-        width: 5.0,
-        height: 2.7,
-      ),
-      studShade,
-    );
-    canvas.drawOval(
-      Rect.fromCenter(center: center, width: 4.8, height: 2.6),
-      stud,
-    );
   }
 }
 

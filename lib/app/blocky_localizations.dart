@@ -24,6 +24,13 @@ class BlockyLocalizations {
   String get chooseBlockTheme =>
       _isPortuguese ? 'ESCOLHA O TEMA' : 'CHOOSE BLOCK THEME';
   String get selected => _isPortuguese ? 'SELECIONADO' : 'SELECTED';
+  String get available => _isPortuguese ? 'DISPONÍVEL' : 'AVAILABLE';
+  String get locked => _isPortuguese ? 'BLOQUEADO' : 'LOCKED';
+  String get unlockTheme => _isPortuguese ? 'DESBLOQUEAR' : 'UNLOCK';
+  String get notEnoughCoins =>
+      _isPortuguese ? 'COINS INSUFICIENTES' : 'NOT ENOUGH COINS';
+  String get themeUnlocked =>
+      _isPortuguese ? 'TEMA DESBLOQUEADO!' : 'THEME UNLOCKED!';
   String get soundVolume => _isPortuguese ? 'VOLUME DO SOM' : 'SOUND VOLUME';
   String get vibration => _isPortuguese ? 'VIBRAÇÃO' : 'VIBRATION';
   String get language => _isPortuguese ? 'IDIOMA' : 'LANGUAGE';
@@ -47,7 +54,7 @@ class BlockyLocalizations {
   String get playAgain => _isPortuguese ? 'JOGAR NOVAMENTE' : 'PLAY AGAIN';
   String get home => 'HOME';
 
-  String coinsEarned(int amount) => '+ $amount BLOCKY COINS';
+  String unlockThemeForCoins(int price) => '$unlockTheme · $price BLOCKY COINS';
 
   String perfectFeedback({required int streak, required bool isRecovery}) {
     if (isRecovery) {

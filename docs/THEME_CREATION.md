@@ -128,13 +128,14 @@ cena 3D exclusiva para cada tema.
 
 1. Adicione acento e cores de preview em `lib/app/blocky_colors.dart`.
 2. Atualize os `switches` de `themeAccent` e `themePreviewTower`.
-3. Adicione o detalhe correspondente em `_ThemeSwatchPainter` de
-   `lib/ui/home_screen.dart`.
+3. Adicione uma assinatura reconhecível em `_ThemeCardPreviewPainter` de
+   `lib/ui/theme_selection_screen.dart` quando a paleta sozinha não bastar.
 4. Atualize `_themeName`.
 
-O seletor de temas deve permanecer rolável quando a lista não couber na altura
+O catálogo de temas deve permanecer rolável quando a lista não couber na altura
 disponível. Não suponha que a quantidade atual de temas caiba em um dispositivo
-específico.
+específico. Todo tema novo começa bloqueado e precisa de preço definido em
+`GameConfig.blockThemePrices`.
 
 ## 8. Teste e revise
 

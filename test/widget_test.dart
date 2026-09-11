@@ -4,6 +4,7 @@ import 'package:blocky/game/block_color_palette.dart';
 import 'package:blocky/game/block_overlap.dart';
 import 'package:blocky/game/block_theme.dart';
 import 'package:blocky/game/block_theme_storage.dart';
+import 'package:blocky/game/block_theme_unlock_storage.dart';
 import 'package:blocky/game/blocky_coin_storage.dart';
 import 'package:blocky/game/blocky_game_controller.dart';
 import 'package:blocky/game/best_score_storage.dart';
@@ -19,6 +20,7 @@ import 'package:blocky/app/arcade_design_system.dart';
 import 'package:blocky/app/blocky_app.dart';
 import 'package:blocky/app/blocky_localizations.dart';
 import 'package:blocky/ui/settings_screen.dart';
+import 'package:blocky/ui/theme_selection_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -222,11 +224,78 @@ void main() {
   test('restores the most recently selected block theme', () async {
     final storage = _InMemoryBlockThemeStorage();
 
-    expect(await storage.load(), BlockTheme.jelly);
+    expect(await storage.load(), BlockTheme.classic);
 
     await storage.save(BlockTheme.chocolate);
 
     expect(await storage.load(), BlockTheme.chocolate);
+  });
+
+  test('keeps Classic available in the persisted theme collection', () async {
+    final storage = _InMemoryBlockThemeUnlockStorage();
+
+    expect(await storage.load(), {BlockTheme.classic});
+
+    await storage.save({BlockTheme.classic, BlockTheme.neon});
+
+    expect(await storage.load(), {BlockTheme.classic, BlockTheme.neon});
+  });
+
+  test('defines a price for every block theme', () {
+    expect(GameConfig.blockThemePrice(BlockTheme.classic), 0);
+    for (final theme in BlockTheme.values) {
+      expect(GameConfig.blockThemePrices.containsKey(theme), isTrue);
+      expect(GameConfig.blockThemePrice(theme), greaterThanOrEqualTo(0));
+    }
+  });
+
+  testWidgets('shows unavailable themes as locked in the theme catalog', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [BlockyLocalizations.delegate],
+        supportedLocales: BlockyLocalizations.supportedLocales,
+        home: ThemeSelectionScreen(
+          selectedTheme: BlockTheme.classic,
+          unlockedThemes: {BlockTheme.classic},
+          blockyCoins: 0,
+          blockyCoinStorage: _InMemoryBlockyCoinStorage(),
+          unlockStorage: _InMemoryBlockThemeUnlockStorage(),
+        ),
+      ),
+    );
+
+    expect(find.text('CLASSIC'), findsOneWidget);
+    expect(find.text('JELLY'), findsAtLeastNWidgets(1));
+    expect(find.text('15'), findsAtLeastNWidgets(1));
+    expect(find.byIcon(Icons.toll), findsAtLeastNWidgets(1));
+    expect(find.byIcon(Icons.lock), findsAtLeastNWidgets(1));
+  });
+
+  testWidgets('unlocks a theme by spending Blocky Coins', (tester) async {
+    final coinStorage = _InMemoryBlockyCoinStorage(15);
+    final unlockStorage = _InMemoryBlockThemeUnlockStorage();
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [BlockyLocalizations.delegate],
+        supportedLocales: BlockyLocalizations.supportedLocales,
+        home: ThemeSelectionScreen(
+          selectedTheme: BlockTheme.classic,
+          unlockedThemes: {BlockTheme.classic},
+          blockyCoins: 15,
+          blockyCoinStorage: coinStorage,
+          unlockStorage: unlockStorage,
+        ),
+      ),
+    );
+
+    await tester.tap(find.byIcon(Icons.lock).first);
+    await tester.pumpAndSettle();
+
+    expect(coinStorage.storedCoins, 0);
+    expect(await unlockStorage.load(), contains(BlockTheme.jelly));
+    expect(find.text('JELLY'), findsOneWidget);
   });
 
   test(
@@ -762,7 +831,7 @@ class _InMemoryBlockyCoinStorage extends BlockyCoinStorage {
 }
 
 class _InMemoryBlockThemeStorage extends BlockThemeStorage {
-  BlockTheme selectedTheme = BlockTheme.jelly;
+  BlockTheme selectedTheme = BlockTheme.classic;
 
   @override
   Future<BlockTheme> load() async => selectedTheme;
@@ -770,6 +839,18 @@ class _InMemoryBlockThemeStorage extends BlockThemeStorage {
   @override
   Future<void> save(BlockTheme theme) async {
     selectedTheme = theme;
+  }
+}
+
+class _InMemoryBlockThemeUnlockStorage extends BlockThemeUnlockStorage {
+  Set<BlockTheme> unlockedThemes = {BlockTheme.classic};
+
+  @override
+  Future<Set<BlockTheme>> load() async => {...unlockedThemes};
+
+  @override
+  Future<void> save(Set<BlockTheme> themes) async {
+    unlockedThemes = {...themes, BlockTheme.classic};
   }
 }
 

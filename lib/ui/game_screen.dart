@@ -15,7 +15,7 @@ import 'package:flutter/material.dart';
 class GameScreen extends StatefulWidget {
   const GameScreen({
     super.key,
-    this.blockTheme = BlockTheme.jelly,
+    this.blockTheme = BlockTheme.classic,
     this.settings = const GameSettings(),
   });
 
@@ -183,11 +183,10 @@ class _GameScreenState extends State<GameScreen> {
                                 ],
                               ),
                               const SizedBox(height: 18),
-                              Text(
-                                l10n.coinsEarned(
-                                  _gameController.coinsEarnedThisGame,
-                                ),
-                                style: ArcadeTypography.button.copyWith(
+                              ArcadeCoinAmount(
+                                amount:
+                                    '+${_gameController.coinsEarnedThisGame}',
+                                textStyle: ArcadeTypography.button.copyWith(
                                   color: ArcadeColors.primary,
                                   fontSize: 13,
                                   letterSpacing: 1.0,

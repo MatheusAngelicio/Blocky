@@ -16,9 +16,9 @@ class BlockThemeStorage {
   Future<BlockTheme> load() async {
     try {
       final savedTheme = await _activePreferences.getString(_selectedThemeKey);
-      return BlockTheme.values.asNameMap()[savedTheme] ?? BlockTheme.jelly;
+      return BlockTheme.values.asNameMap()[savedTheme] ?? BlockTheme.classic;
     } catch (_) {
-      return BlockTheme.jelly;
+      return BlockTheme.classic;
     }
   }
 

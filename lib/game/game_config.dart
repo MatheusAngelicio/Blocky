@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import 'package:blocky/game/block_theme.dart';
+
 abstract final class GameConfig {
   static const blockWidth = 3.6;
   static const blockHeight = 0.6;
@@ -80,6 +82,16 @@ abstract final class GameConfig {
   static const perfectStreakForRecovery = 4;
   static const blocksPerBlockyCoin = 10;
   static const blockyCoinsPerPerfectRecovery = 1;
+  // Economia inicial dos temas. Mantida centralizada para ajustes de
+  // balanceamento sem tocar na interface ou na persistência.
+  static const blockThemePrices = <BlockTheme, int>{
+    BlockTheme.classic: 0,
+    BlockTheme.jelly: 15,
+    BlockTheme.cheese: 35,
+    BlockTheme.chocolate: 55,
+    BlockTheme.neon: 90,
+    BlockTheme.lego: 140,
+  };
   static const perfectRecoveryAmount = 0.6;
   static const perfectRecoveryAnimationDuration = Duration(milliseconds: 220);
   static const perfectRecoveryFeedbackDuration = Duration(milliseconds: 700);
@@ -100,6 +112,8 @@ abstract final class GameConfig {
         (movingBlockMaximumSpeed - movingBlockInitialSpeed) *
             math.exp(-score * movingBlockSpeedGrowthRate);
   }
+
+  static int blockThemePrice(BlockTheme theme) => blockThemePrices[theme]!;
 
   static double minimumSpeedAfterPerfectRelief() {
     return movingBlockSpeedForScore(perfectSpeedReliefStartScore);

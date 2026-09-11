@@ -14,7 +14,7 @@ class SettingsScreen extends StatefulWidget {
     required this.initialSettings,
     required this.settingsStorage,
     this.onSettingsChanged,
-    this.previewTheme = BlockTheme.jelly,
+    this.previewTheme = BlockTheme.classic,
   });
 
   final GameSettings initialSettings;

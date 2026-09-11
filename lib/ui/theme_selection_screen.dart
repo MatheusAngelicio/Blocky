@@ -309,71 +309,236 @@ class _ThemeCardPreviewPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final accent = BlockyColors.themeAccent(theme);
     final colors = BlockyColors.themePreviewTower(theme);
-    final paint = Paint()..isAntiAlias = false;
     final background = RRect.fromRectAndRadius(
       Offset.zero & size,
       const Radius.circular(2),
     );
-    canvas.drawRRect(background, paint..color = accent.withValues(alpha: 0.12));
-
+    canvas.drawRRect(
+      background,
+      Paint()
+        ..color = accent.withValues(alpha: 0.12)
+        ..isAntiAlias = false,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(size.width * 0.52, size.height * 0.86),
+        width: size.width * 0.78,
+        height: size.height * 0.13,
+      ),
+      Paint()
+        ..color = ArcadeColors.shadow.withValues(alpha: 0.42)
+        ..isAntiAlias = false,
+    );
     final centerX = size.width / 2;
+    final foundationWidth = size.width * 0.82;
+    _drawBlock(
+      canvas,
+      color: _darken(colors.first, 0.14),
+      x: centerX - foundationWidth / 2,
+      y: size.height * 0.72,
+      width: foundationWidth,
+      depth: foundationWidth * 0.075,
+      height: size.height * 0.08,
+      details: false,
+    );
+
     for (var index = 0; index < 3; index++) {
-      final width = size.width * (0.74 - index * 0.14);
-      final height = size.height * 0.18;
-      final top = size.height * (0.62 - index * 0.16);
-      final rect = Rect.fromLTWH(centerX - width / 2, top, width, height);
-      canvas.drawRect(rect, paint..color = colors[index % colors.length]);
-      canvas.drawRect(
-        Rect.fromLTWH(
-          rect.left,
-          rect.bottom - height * 0.24,
-          rect.width,
-          height * 0.24,
-        ),
-        paint..color = accent.withValues(alpha: 0.28),
+      final progress = index / 3;
+      final blockWidth = size.width * (0.72 - progress * 0.14);
+      _drawBlock(
+        canvas,
+        color: colors[index],
+        x: centerX - blockWidth / 2 + progress * size.width * 0.035,
+        y: size.height * (0.58 - index * 0.16),
+        width: blockWidth,
+        depth: blockWidth * 0.085,
+        height: size.height * 0.105,
       );
     }
+    final movingWidth = size.width * 0.46;
+    _drawBlock(
+      canvas,
+      color: colors.last,
+      x: centerX + size.width * 0.015,
+      y: size.height * 0.08,
+      width: movingWidth,
+      depth: movingWidth * 0.085,
+      height: size.height * 0.105,
+    );
+  }
 
-    if (theme == BlockTheme.lego) {
-      paint.color = ArcadeColors.white.withValues(alpha: 0.45);
-      for (
-        var x = size.width * 0.28;
-        x < size.width * 0.75;
-        x += size.width * 0.16
-      ) {
-        canvas.drawCircle(
-          Offset(x, size.height * 0.42),
-          size.width * 0.045,
-          paint,
+  void _drawBlock(
+    Canvas canvas, {
+    required Color color,
+    required double x,
+    required double y,
+    required double width,
+    required double depth,
+    required double height,
+    bool details = true,
+  }) {
+    final top = Path()
+      ..moveTo(x, y + depth)
+      ..lineTo(x + width * 0.5, y)
+      ..lineTo(x + width, y + depth)
+      ..lineTo(x + width * 0.5, y + depth * 2)
+      ..close();
+    final side = Path()
+      ..moveTo(x + width, y + depth)
+      ..lineTo(x + width * 0.5, y + depth * 2)
+      ..lineTo(x + width * 0.5, y + depth * 2 + height)
+      ..lineTo(x + width, y + depth + height)
+      ..close();
+    final front = Path()
+      ..moveTo(x, y + depth)
+      ..lineTo(x + width * 0.5, y + depth * 2)
+      ..lineTo(x + width * 0.5, y + depth * 2 + height)
+      ..lineTo(x, y + depth + height)
+      ..close();
+    canvas.drawPath(
+      front.shift(Offset(0, height * 0.15)),
+      Paint()
+        ..color = ArcadeColors.shadow.withValues(alpha: 0.24)
+        ..isAntiAlias = false,
+    );
+    canvas.drawPath(top, Paint()..color = _lighten(color, 0.2));
+    canvas.drawPath(side, Paint()..color = _darken(color, 0.25));
+    canvas.drawPath(front, Paint()..color = color);
+    if (!details) return;
+
+    switch (theme) {
+      case BlockTheme.classic:
+        canvas.drawPath(
+          Path()
+            ..moveTo(x + width * 0.12, y + depth * 1.1)
+            ..lineTo(x + width * 0.45, y + depth * 0.44)
+            ..lineTo(x + width * 0.56, y + depth * 0.54)
+            ..lineTo(x + width * 0.23, y + depth * 1.2)
+            ..close(),
+          Paint()..color = ArcadeColors.white.withValues(alpha: 0.16),
         );
-      }
-    } else if (theme == BlockTheme.cheese) {
-      paint.color = ArcadeColors.shadow.withValues(alpha: 0.28);
-      canvas.drawCircle(
-        Offset(size.width * 0.42, size.height * 0.5),
-        size.width * 0.06,
-        paint,
-      );
-      canvas.drawCircle(
-        Offset(size.width * 0.62, size.height * 0.66),
-        size.width * 0.04,
-        paint,
-      );
-    } else if (theme == BlockTheme.neon) {
-      paint
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..color = BlockyColors.neonAccent;
-      canvas.drawRect(
-        Rect.fromCenter(
-          center: Offset(centerX, size.height * 0.49),
-          width: size.width * 0.55,
-          height: size.height * 0.25,
-        ),
-        paint,
-      );
+      case BlockTheme.jelly:
+        canvas.drawLine(
+          Offset(x + width * 0.12, y + depth + height * 0.28),
+          Offset(x + width * 0.47, y + depth * 1.7 + height * 0.28),
+          Paint()
+            ..color = ArcadeColors.white.withValues(alpha: 0.26)
+            ..strokeWidth = 1.2,
+        );
+      case BlockTheme.chocolate:
+        final groove = Paint()
+          ..color = _darken(color, 0.48).withValues(alpha: 0.76)
+          ..strokeWidth = 1.1;
+        for (final fraction in const [0.34, 0.66]) {
+          canvas.drawLine(
+            Offset(x + width * fraction, y + depth * (1 - fraction)),
+            Offset(x + width * fraction, y + depth * (2 - fraction)),
+            groove,
+          );
+        }
+        canvas.drawLine(
+          Offset(x + width * 0.2, y + depth),
+          Offset(x + width * 0.8, y + depth),
+          groove,
+        );
+      case BlockTheme.cheese:
+        final hole = Paint()..color = _darken(color, 0.38);
+        for (final point in const [Offset(0.37, 0.72), Offset(0.61, 0.91)]) {
+          canvas.drawCircle(
+            Offset(x + width * point.dx, y + depth * point.dy),
+            width * 0.04,
+            hole,
+          );
+        }
+        canvas.drawCircle(
+          Offset(x + width * 0.22, y + depth + height * 0.45),
+          width * 0.028,
+          hole,
+        );
+      case BlockTheme.neon:
+        final pink = const Color(0xFFFF38B7);
+        final cyan = const Color(0xFF22E6F5);
+        _drawNeonLine(
+          canvas,
+          [
+            Offset(x, y + depth),
+            Offset(x + width * 0.5, y),
+            Offset(x + width, y + depth),
+            Offset(x + width * 0.5, y + depth * 2),
+            Offset(x, y + depth),
+          ],
+          pink,
+          1.1,
+        );
+        _drawNeonLine(
+          canvas,
+          [
+            Offset(x + width * 0.08, y + depth + height * 0.76),
+            Offset(x + width * 0.45, y + depth * 1.7 + height * 0.76),
+          ],
+          cyan,
+          1.0,
+        );
+      case BlockTheme.lego:
+        final seam = Paint()
+          ..color = _darken(color, 0.45).withValues(alpha: 0.7)
+          ..strokeWidth = 0.9;
+        for (final fraction in const [0.34, 0.67]) {
+          final point = Offset(
+            x + width * fraction * 0.5,
+            y + depth * (1 + fraction),
+          );
+          canvas.drawLine(point, point + Offset(0, height * 0.76), seam);
+        }
+        final radius = width * 0.035;
+        final studShadow = Paint()..color = _darken(color, 0.36);
+        final stud = Paint()..color = _lighten(color, 0.14);
+        for (var row = 0; row < 2; row++) {
+          for (var column = 0; column < 4; column++) {
+            final center = Offset(
+              x + width * (0.23 + column * 0.135 + row * 0.11),
+              y + depth * (0.72 + column * 0.125 + row * 0.36),
+            );
+            canvas.drawCircle(
+              center + Offset(0, radius * 0.34),
+              radius,
+              studShadow,
+            );
+            canvas.drawCircle(center, radius, stud);
+          }
+        }
     }
   }
+
+  void _drawNeonLine(
+    Canvas canvas,
+    List<Offset> points,
+    Color color,
+    double strokeWidth,
+  ) {
+    final path = Path()..addPolygon(points, false);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color.withValues(alpha: 0.45)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth * 2.6
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, strokeWidth * 1.5),
+    );
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth,
+    );
+  }
+
+  Color _lighten(Color color, double amount) =>
+      Color.lerp(color, ArcadeColors.white, amount)!;
+
+  Color _darken(Color color, double amount) =>
+      Color.lerp(color, ArcadeColors.black, amount)!;
 
   @override
   bool shouldRepaint(_ThemeCardPreviewPainter oldDelegate) =>

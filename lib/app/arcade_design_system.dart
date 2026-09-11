@@ -351,10 +351,70 @@ class ArcadeCoinAmount extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.toll, color: color, size: iconSize),
+        PixelCoinIcon(size: iconSize),
         SizedBox(width: gap),
         Text(amount, style: textStyle.copyWith(color: color)),
       ],
     );
   }
+}
+
+/// Moeda própria do Blocky, construída em uma grade simples de pixels.
+class PixelCoinIcon extends StatelessWidget {
+  const PixelCoinIcon({super.key, this.size = 20});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: CustomPaint(
+        size: Size.square(size),
+        painter: const _PixelCoinPainter(),
+      ),
+    );
+  }
+}
+
+class _PixelCoinPainter extends CustomPainter {
+  const _PixelCoinPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final unit = size.shortestSide / 8;
+    final outline = Paint()
+      ..color = const Color(0xFF8D5D16)
+      ..isAntiAlias = false;
+    final coin = Paint()
+      ..color = ArcadeColors.primary
+      ..isAntiAlias = false;
+    final shade = Paint()
+      ..color = const Color(0xFFD99828)
+      ..isAntiAlias = false;
+    final shine = Paint()
+      ..color = const Color(0xFFFFF0A6)
+      ..isAntiAlias = false;
+
+    void pixelRect(int x, int y, int width, int height, Paint paint) {
+      canvas.drawRect(
+        Rect.fromLTWH(x * unit, y * unit, width * unit, height * unit),
+        paint,
+      );
+    }
+
+    pixelRect(2, 0, 4, 1, outline);
+    pixelRect(1, 1, 6, 6, outline);
+    pixelRect(2, 7, 4, 1, outline);
+
+    pixelRect(2, 1, 4, 1, coin);
+    pixelRect(1, 2, 6, 4, coin);
+    pixelRect(2, 6, 4, 1, shade);
+    pixelRect(6, 2, 1, 4, shade);
+    pixelRect(2, 2, 1, 1, shine);
+    pixelRect(3, 2, 2, 1, shine);
+    pixelRect(3, 4, 2, 1, shade);
+  }
+
+  @override
+  bool shouldRepaint(_PixelCoinPainter oldDelegate) => false;
 }

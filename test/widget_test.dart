@@ -269,7 +269,7 @@ void main() {
     expect(find.text('CLASSIC'), findsOneWidget);
     expect(find.text('JELLY'), findsAtLeastNWidgets(1));
     expect(find.text('15'), findsAtLeastNWidgets(1));
-    expect(find.byIcon(Icons.toll), findsAtLeastNWidgets(1));
+    expect(find.byType(PixelCoinIcon), findsAtLeastNWidgets(1));
     expect(find.byIcon(Icons.lock), findsAtLeastNWidgets(1));
   });
 

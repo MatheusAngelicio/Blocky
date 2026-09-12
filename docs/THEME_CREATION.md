@@ -140,11 +140,18 @@ cena 3D exclusiva para cada tema.
    confira visualmente ao menos duas partidas para garantir que todas preservam
    legibilidade.
 
-## 7. Integre a Home
+## 7. Integre a Home e os previews
+
+Os previews da Home e da tela de escolha de tema são uma prévia da gameplay.
+Eles devem reproduzir a identidade visual do tema — paleta, material,
+sombreamento e detalhes relevantes do topo e das laterais — de forma
+proporcional ao espaço disponível. Podem omitir microdetalhes em blocos
+pequenos, mas não devem criar efeitos, geometria ou acabamento que não existam
+na gameplay.
 
 1. Adicione acento e cores de preview em `lib/app/blocky_colors.dart`.
 2. Atualize os `switches` de `themeAccent` e `themePreviewTower`.
-3. Adicione uma assinatura reconhecível em `_ThemeCardPreviewPainter` de
+3. Atualize a assinatura visual da Home e de `_ThemeCardPreviewPainter` em
    `lib/ui/theme_selection_screen.dart` quando a paleta sozinha não bastar.
 4. Atualize `_themeName`.
 

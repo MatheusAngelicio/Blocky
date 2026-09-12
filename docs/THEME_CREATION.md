@@ -53,19 +53,34 @@ diferença. Se isso não produzir uma identidade clara, crie um novo valor em
 ## 3. Adicione a identidade declarativa
 
 1. Inclua o valor em `lib/game/block_theme.dart`, com nome em inglês.
-2. Crie uma configuração `static const` em
+2. Defina a raridade no getter `BlockThemeRarityX.rarity`. Todo tema pertence
+   a exatamente uma categoria do catálogo: Comum, Rara, Épica ou Lendária.
+3. Crie uma configuração `static const` em
    `lib/scene/block_theme_visual.dart`.
-3. Defina ao menos:
+4. Defina ao menos:
    - `surfaceDetail` exclusivo ou uma combinação visual não usada;
    - `BlockImpactVisual` único para encaixes normais;
    - paleta em `BlockColorProgression`;
    - material (`metallicFactor`, `roughnessFactor`, opacidade);
    - feedbacks de Perfect, Recovery, queda e corte somente quando contribuírem
      para a identidade.
-4. Registre o tema em `BlockThemeVisual.forTheme`.
+5. Registre o tema em `BlockThemeVisual.forTheme`.
 
 O `BlockImpactVisual` controla apenas a representação: o tamanho lógico,
 collider e próximo overlap permanecem inalterados.
+
+### Categorias atuais
+
+| Raridade | Temas |
+| --- | --- |
+| Comum | Classic, Jelly, Chocolate |
+| Rara | Cheese |
+| Épica | Neon |
+| Lendária | Lego |
+
+A raridade organiza a navegação do catálogo e não altera preço, gameplay ou
+comportamento visual do tema. Ao incluir outro tema, escolha a categoria pela
+percepção de valor desejada e revise seu preço em `GameConfig.blockThemePrices`.
 
 ## 4. Crie o detalhe 3D com custo controlado
 
@@ -134,8 +149,8 @@ cena 3D exclusiva para cada tema.
 
 O catálogo de temas deve permanecer rolável quando a lista não couber na altura
 disponível. Não suponha que a quantidade atual de temas caiba em um dispositivo
-específico. Todo tema novo começa bloqueado e precisa de preço definido em
-`GameConfig.blockThemePrices`.
+específico. Todo tema novo começa bloqueado, precisa de preço definido em
+`GameConfig.blockThemePrices` e deve aparecer somente na aba de sua raridade.
 
 ## 8. Teste e revise
 
@@ -162,6 +177,7 @@ específico. Todo tema novo começa bloqueado e precisa de preço definido em
 ## Checklist de aprovação
 
 - [ ] Nome, preview e persistência do tema funcionam.
+- [ ] A raridade está definida e o tema aparece na aba correta do catálogo.
 - [ ] A identidade visual continua reconhecível após corte.
 - [ ] Os detalhes aleatórios são estáveis e limpos em restart/dispose.
 - [ ] O encaixe normal é visualmente distinto de todos os outros temas.

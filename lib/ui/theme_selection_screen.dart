@@ -38,6 +38,7 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
       ? BlockTheme.values.toSet()
       : {...widget.unlockedThemes};
   late int _blockyCoins = widget.blockyCoins;
+  late BlockThemeRarity _selectedRarity = widget.selectedTheme.rarity;
   BlockTheme? _purchasingTheme;
 
   Future<void> _selectTheme(BlockTheme theme) async {
@@ -80,6 +81,9 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final themes = BlockTheme.values
+        .where((theme) => theme.rarity == _selectedRarity)
+        .toList(growable: false);
 
     return Scaffold(
       backgroundColor: ArcadeColors.canvas,
@@ -123,7 +127,29 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 42,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: BlockThemeRarity.values.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 10),
+                        itemBuilder: (context, index) {
+                          final rarity = BlockThemeRarity.values[index];
+                          return _ThemeRarityTab(
+                            label: l10n.rarityName(rarity),
+                            rarity: rarity,
+                            selected: rarity == _selectedRarity,
+                            onTap: () {
+                              setState(() {
+                                _selectedRarity = rarity;
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     Expanded(
                       child: GridView.builder(
                         gridDelegate:
@@ -133,9 +159,9 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
                               mainAxisSpacing: 14,
                               childAspectRatio: 0.82,
                             ),
-                        itemCount: BlockTheme.values.length,
+                        itemCount: themes.length,
                         itemBuilder: (context, index) {
-                          final theme = BlockTheme.values[index];
+                          final theme = themes[index];
                           final unlocked = _unlockedThemes.contains(theme);
                           return _ThemeShopCard(
                             theme: theme,
@@ -152,6 +178,57 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
                   ],
                 ),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ThemeRarityTab extends StatelessWidget {
+  const _ThemeRarityTab({
+    required this.label,
+    required this.rarity,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final BlockThemeRarity rarity;
+  final bool selected;
+  final VoidCallback onTap;
+
+  Color get _color => switch (rarity) {
+    BlockThemeRarity.common => ArcadeColors.primary,
+    BlockThemeRarity.rare => ArcadeColors.secondary,
+    BlockThemeRarity.epic => ArcadeColors.strongOutline,
+    BlockThemeRarity.legendary => const Color(0xFFFF9D3F),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _color;
+    return Material(
+      color: ArcadeColors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: selected
+                ? color.withValues(alpha: 0.2)
+                : ArcadeColors.surface,
+            border: Border.all(
+              color: selected ? color : ArcadeColors.outline,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Text(
+            label.toUpperCase(),
+            style: ArcadeTypography.label.copyWith(
+              color: selected ? color : ArcadeColors.muted,
             ),
           ),
         ),

@@ -86,11 +86,11 @@ abstract final class GameConfig {
   // balanceamento sem tocar na interface ou na persistência.
   static const blockThemePrices = <BlockTheme, int>{
     BlockTheme.classic: 0,
-    BlockTheme.jelly: 15,
-    BlockTheme.cheese: 35,
-    BlockTheme.chocolate: 55,
-    BlockTheme.neon: 90,
-    BlockTheme.lego: 140,
+    BlockTheme.jelly: 200,
+    BlockTheme.chocolate: 200,
+    BlockTheme.cheese: 500,
+    BlockTheme.neon: 1000,
+    BlockTheme.lego: 2000,
   };
   static const perfectRecoveryAmount = 0.6;
   static const perfectRecoveryAnimationDuration = Duration(milliseconds: 220);

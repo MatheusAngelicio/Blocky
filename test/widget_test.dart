@@ -249,6 +249,18 @@ void main() {
     }
   });
 
+  test('groups block themes by their catalog rarity', () {
+    expect(
+      BlockTheme.values.where(
+        (theme) => theme.rarity == BlockThemeRarity.common,
+      ),
+      [BlockTheme.classic, BlockTheme.jelly, BlockTheme.chocolate],
+    );
+    expect(BlockTheme.cheese.rarity, BlockThemeRarity.rare);
+    expect(BlockTheme.neon.rarity, BlockThemeRarity.epic);
+    expect(BlockTheme.lego.rarity, BlockThemeRarity.legendary);
+  });
+
   testWidgets('shows unavailable themes as locked in the theme catalog', (
     tester,
   ) async {
@@ -268,9 +280,35 @@ void main() {
 
     expect(find.text('CLASSIC'), findsOneWidget);
     expect(find.text('JELLY'), findsAtLeastNWidgets(1));
-    expect(find.text('15'), findsAtLeastNWidgets(1));
+    expect(
+      find.text(GameConfig.blockThemePrice(BlockTheme.jelly).toString()),
+      findsAtLeastNWidgets(1),
+    );
     expect(find.byType(PixelCoinIcon), findsAtLeastNWidgets(1));
     expect(find.byIcon(Icons.lock), findsAtLeastNWidgets(1));
+  });
+
+  testWidgets('filters the theme catalog by selected rarity', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [BlockyLocalizations.delegate],
+        supportedLocales: BlockyLocalizations.supportedLocales,
+        home: ThemeSelectionScreen(
+          selectedTheme: BlockTheme.classic,
+          unlockedThemes: {BlockTheme.classic},
+          blockyCoins: 0,
+          blockyCoinStorage: _InMemoryBlockyCoinStorage(),
+          unlockStorage: _InMemoryBlockThemeUnlockStorage(),
+        ),
+      ),
+    );
+
+    expect(find.text('CLASSIC'), findsOneWidget);
+    await tester.tap(find.text('RARE'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('CHEESE'), findsOneWidget);
+    expect(find.text('CLASSIC'), findsNothing);
   });
 
   testWidgets('makes every theme available in development mode', (
@@ -291,11 +329,16 @@ void main() {
       ),
     );
 
+    await tester.tap(find.text('LEGENDARY'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('LEGO'), findsOneWidget);
     expect(find.byIcon(Icons.lock), findsNothing);
   });
 
   testWidgets('unlocks a theme by spending Blocky Coins', (tester) async {
-    final coinStorage = _InMemoryBlockyCoinStorage(15);
+    final price = GameConfig.blockThemePrice(BlockTheme.jelly);
+    final coinStorage = _InMemoryBlockyCoinStorage(price);
     final unlockStorage = _InMemoryBlockThemeUnlockStorage();
     await tester.pumpWidget(
       MaterialApp(
@@ -304,7 +347,7 @@ void main() {
         home: ThemeSelectionScreen(
           selectedTheme: BlockTheme.classic,
           unlockedThemes: {BlockTheme.classic},
-          blockyCoins: 15,
+          blockyCoins: price,
           blockyCoinStorage: coinStorage,
           unlockStorage: unlockStorage,
         ),

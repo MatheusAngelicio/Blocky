@@ -73,6 +73,13 @@ class BlockyLocalizations {
     BlockTheme.lego => 'Lego',
   };
 
+  String rarityName(BlockThemeRarity rarity) => switch (rarity) {
+    BlockThemeRarity.common => _isPortuguese ? 'Comum' : 'Common',
+    BlockThemeRarity.rare => _isPortuguese ? 'Rara' : 'Rare',
+    BlockThemeRarity.epic => _isPortuguese ? 'Épica' : 'Epic',
+    BlockThemeRarity.legendary => _isPortuguese ? 'Lendária' : 'Legendary',
+  };
+
   String languageName(AppLanguage language) => switch (language) {
     AppLanguage.system => automatic,
     AppLanguage.english => 'English',

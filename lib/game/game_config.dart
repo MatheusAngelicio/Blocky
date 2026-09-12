@@ -91,7 +91,7 @@ abstract final class GameConfig {
     BlockTheme.cheese: 500,
     BlockTheme.neon: 1000,
     BlockTheme.lego: 2000,
-    BlockTheme.ruby: 2500,
+    BlockTheme.ruby: 2000,
   };
   static const perfectRecoveryAmount = 0.6;
   static const perfectRecoveryAnimationDuration = Duration(milliseconds: 220);

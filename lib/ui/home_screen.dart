@@ -321,17 +321,23 @@ class _ThemeTowerPainter extends CustomPainter {
     final colors = BlockyColors.themePreviewTower(theme);
     final centerX = size.width / 2;
     final accent = BlockyColors.themeAccent(theme);
+    final isRuby = theme == BlockTheme.ruby;
 
     final backdrop = RRect.fromRectAndRadius(
       Offset.zero & size,
       const Radius.circular(4),
     );
-    canvas.drawRRect(backdrop, Paint()..color = accent.withValues(alpha: 0.08));
-    canvas.drawCircle(
-      Offset(size.width * 0.78, size.height * 0.22),
-      size.width * 0.16,
-      Paint()..color = accent.withValues(alpha: 0.09),
+    canvas.drawRRect(
+      backdrop,
+      Paint()..color = accent.withValues(alpha: isRuby ? 0.045 : 0.08),
     );
+    if (!isRuby) {
+      canvas.drawCircle(
+        Offset(size.width * 0.78, size.height * 0.22),
+        size.width * 0.16,
+        Paint()..color = accent.withValues(alpha: 0.09),
+      );
+    }
 
     final foundationWidth = size.width * 0.78;
     _drawPreviewBlock(
@@ -663,6 +669,108 @@ void _drawPreviewBlock(
           );
         }
       }
+    case BlockTheme.ruby:
+      _drawRubyPreviewFacets(
+        canvas,
+        color: color,
+        top: top,
+        front: front,
+        right: right,
+        x: x,
+        y: y,
+        width: width,
+        depth: depth,
+        height: height,
+      );
+  }
+}
+
+void _drawRubyPreviewFacets(
+  Canvas canvas, {
+  required Color color,
+  required Path top,
+  required Path front,
+  required Path right,
+  required double x,
+  required double y,
+  required double width,
+  required double depth,
+  required double height,
+}) {
+  final rubyHighlight = Color.lerp(color, const Color(0xFFF05A70), 0.4)!;
+  final brightFacet = Paint()..color = rubyHighlight.withValues(alpha: 0.32);
+  final middleFacet = Paint()
+    ..color = _lighten(color, 0.14).withValues(alpha: 0.3);
+  final darkFacet = Paint()
+    ..color = _darken(color, 0.46).withValues(alpha: 0.6);
+  final edgeWidth = math.max(0.7, width * 0.013);
+  final edge = Paint()
+    ..color = rubyHighlight.withValues(alpha: 0.76)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = edgeWidth;
+
+  canvas.save();
+  canvas.clipPath(top);
+  canvas.drawPath(
+    Path()
+      ..moveTo(x + width * 0.5, y + depth * 0.12)
+      ..lineTo(x + width * 0.97, y + depth * 1.0)
+      ..lineTo(x + width * 0.5, y + depth * 1.8)
+      ..close(),
+    brightFacet,
+  );
+  canvas.drawPath(
+    Path()
+      ..moveTo(x + width * 0.04, y + depth)
+      ..lineTo(x + width * 0.5, y + depth * 1.8)
+      ..lineTo(x + width * 0.5, y + depth * 0.12)
+      ..close(),
+    darkFacet,
+  );
+  canvas.drawPath(
+    Path()
+      ..moveTo(x + width * 0.22, y + depth * 0.5)
+      ..lineTo(x + width * 0.7, y + depth * 0.42)
+      ..lineTo(x + width * 0.54, y + depth * 1.4)
+      ..close(),
+    middleFacet,
+  );
+  canvas.restore();
+
+  canvas.save();
+  canvas.clipPath(front);
+  canvas.drawPath(
+    Path()
+      ..moveTo(x + width * 0.02, y + depth + height * 0.18)
+      ..lineTo(x + width * 0.48, y + depth * 1.88 + height * 0.12)
+      ..lineTo(x + width * 0.42, y + depth * 1.82 + height * 0.86)
+      ..close(),
+    darkFacet,
+  );
+  canvas.drawPath(
+    Path()
+      ..moveTo(x + width * 0.14, y + depth + height * 0.08)
+      ..lineTo(x + width * 0.46, y + depth * 1.72 + height * 0.12)
+      ..lineTo(x + width * 0.26, y + depth + height * 0.84)
+      ..close(),
+    brightFacet,
+  );
+  canvas.restore();
+
+  canvas.save();
+  canvas.clipPath(right);
+  canvas.drawPath(
+    Path()
+      ..moveTo(x + width * 0.56, y + depth * 1.88 + height * 0.12)
+      ..lineTo(x + width * 0.98, y + depth * 1.04 + height * 0.22)
+      ..lineTo(x + width * 0.6, y + depth * 1.82 + height * 0.86)
+      ..close(),
+    brightFacet,
+  );
+  canvas.restore();
+
+  for (final face in [top, front, right]) {
+    canvas.drawPath(face, edge);
   }
 }
 

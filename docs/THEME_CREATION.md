@@ -44,6 +44,7 @@ Antes de definir o novo, compare-o com `BlockThemeVisual` e
 | Cheese | furos estáveis em topo e laterais | assentamento firme sutil |
 | Neon | moldura rosa, base ciano e trilhas de circuito em painel grafite | pulso de energia |
 | Lego | plástico brilhante, studs em grade e emendas laterais em malha única | travamento de peça |
+| Rubi | gema vermelho-profunda, facetas claras no topo e laterais | pulso cristalino |
 
 O novo tema não pode repetir a mesma combinação. Se usar uma família de
 movimento existente, use parâmetros perceptivelmente diferentes e documente a
@@ -76,7 +77,7 @@ collider e próximo overlap permanecem inalterados.
 | Comum | Classic, Jelly, Chocolate |
 | Rara | Cheese |
 | Épica | Neon |
-| Lendária | Lego |
+| Lendária | Lego, Rubi |
 
 A raridade organiza a navegação do catálogo e não altera preço, gameplay ou
 comportamento visual do tema. Ao incluir outro tema, escolha a categoria pela

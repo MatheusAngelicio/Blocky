@@ -1,5 +1,5 @@
 /// Identifica o estilo visual aplicado aos blocos durante uma partida.
-enum BlockTheme { classic, jelly, chocolate, cheese, neon, lego }
+enum BlockTheme { classic, jelly, chocolate, cheese, neon, lego, ruby }
 
 /// Agrupa os temas exibidos no catálogo por raridade.
 enum BlockThemeRarity { common, rare, epic, legendary }
@@ -12,5 +12,6 @@ extension BlockThemeRarityX on BlockTheme {
     BlockTheme.cheese => BlockThemeRarity.rare,
     BlockTheme.neon => BlockThemeRarity.epic,
     BlockTheme.lego => BlockThemeRarity.legendary,
+    BlockTheme.ruby => BlockThemeRarity.legendary,
   };
 }

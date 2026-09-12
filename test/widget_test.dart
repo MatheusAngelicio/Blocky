@@ -119,6 +119,7 @@ void main() {
       BlockTheme.cheese,
       BlockTheme.neon,
       BlockTheme.lego,
+      BlockTheme.ruby,
     ]);
     expect(
       BlockThemeVisual.forTheme(BlockTheme.classic),
@@ -143,6 +144,10 @@ void main() {
     expect(
       BlockThemeVisual.forTheme(BlockTheme.lego),
       same(BlockThemeVisual.lego),
+    );
+    expect(
+      BlockThemeVisual.forTheme(BlockTheme.ruby),
+      same(BlockThemeVisual.ruby),
     );
     expect(
       BlockThemeVisual.jelly.placementImpact.motion,
@@ -208,6 +213,15 @@ void main() {
       BlockImpactMotion.brickLock,
     );
     expect(BlockThemeVisual.lego.cutParticles, isNotNull);
+    expect(BlockThemeVisual.ruby.surfaceDetail, BlockSurfaceDetail.rubyFacets);
+    expect(
+      BlockThemeVisual.ruby.placementImpact.motion,
+      BlockImpactMotion.crystalChime,
+    );
+    expect(
+      BlockThemeVisual.ruby.roughnessFactor,
+      lessThan(BlockThemeVisual.chocolate.roughnessFactor),
+    );
     expect(
       BlockThemeVisual.chocolate.colorProgression.valueVariation,
       greaterThan(0),
@@ -259,6 +273,7 @@ void main() {
     expect(BlockTheme.cheese.rarity, BlockThemeRarity.rare);
     expect(BlockTheme.neon.rarity, BlockThemeRarity.epic);
     expect(BlockTheme.lego.rarity, BlockThemeRarity.legendary);
+    expect(BlockTheme.ruby.rarity, BlockThemeRarity.legendary);
   });
 
   testWidgets('shows unavailable themes as locked in the theme catalog', (
@@ -333,6 +348,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('LEGO'), findsOneWidget);
+    expect(find.text('RUBY'), findsOneWidget);
     expect(find.byIcon(Icons.lock), findsNothing);
   });
 

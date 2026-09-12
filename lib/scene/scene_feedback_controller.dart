@@ -341,6 +341,10 @@ class SceneFeedbackController {
       BlockImpactMotion.firmSettle => _firmSettleImpactScale(impact, progress),
       BlockImpactMotion.neonPulse => _neonPulseImpactScale(impact, progress),
       BlockImpactMotion.brickLock => _brickLockImpactScale(impact, progress),
+      BlockImpactMotion.crystalChime => _crystalChimeImpactScale(
+        impact,
+        progress,
+      ),
     };
   }
 
@@ -461,6 +465,33 @@ class SceneFeedbackController {
       1.0 + impact.horizontalScale * 0.16 * intensity,
       1.0 - impact.verticalScale * 0.12 * intensity,
       1.0 + impact.horizontalScale * 0.16 * intensity,
+    );
+  }
+
+  vm.Vector3 _crystalChimeImpactScale(
+    BlockImpactVisual impact,
+    double progress,
+  ) {
+    const flashPortion = 0.3;
+    if (progress < flashPortion) {
+      final flashProgress = progress / flashPortion;
+      final intensity = math.sin(math.pi / 2 * flashProgress);
+      return vm.Vector3(
+        1.0 - impact.reboundHorizontalScale * intensity,
+        1.0 + impact.verticalScale * intensity,
+        1.0 - impact.reboundHorizontalScale * intensity,
+      );
+    }
+
+    final chimeProgress = (progress - flashPortion) / (1.0 - flashPortion);
+    final envelope = math.sin(math.pi * chimeProgress);
+    final shimmer = math.sin(math.pi * 2.0 * chimeProgress) * envelope;
+    return vm.Vector3(
+      1.0 + impact.horizontalScale * (envelope - shimmer * 0.32),
+      1.0 -
+          impact.verticalScale * 0.38 * envelope +
+          impact.reboundVerticalScale * shimmer,
+      1.0 + impact.horizontalScale * (envelope + shimmer * 0.32),
     );
   }
 

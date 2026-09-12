@@ -231,6 +231,18 @@ class SkyThemeProfile {
     minimumStarVisibility: 0.02,
   );
 
+  static final ruby = SkyThemeProfile(
+    atmosphere: SkyPalette(
+      zenith: vm.Vector3(0.18, 0.006, 0.035),
+      horizon: vm.Vector3(0.55, 0.025, 0.1),
+      ground: vm.Vector3(0.06, 0.002, 0.014),
+      sun: vm.Vector3(1.35, 0.12, 0.28),
+    ),
+    atmosphereStrength: 0.68,
+    starColor: vm.Vector3(1.0, 0.44, 0.58),
+    minimumStarVisibility: 0.13,
+  );
+
   final SkyPalette atmosphere;
   final double atmosphereStrength;
   final vm.Vector3 starColor;
@@ -243,6 +255,7 @@ class SkyThemeProfile {
     BlockTheme.cheese => cheese,
     BlockTheme.neon => neon,
     BlockTheme.lego => lego,
+    BlockTheme.ruby => ruby,
   };
 }
 

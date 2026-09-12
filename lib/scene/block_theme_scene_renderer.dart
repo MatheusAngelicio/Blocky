@@ -37,6 +37,12 @@ class BlockThemeSceneRenderer {
     radialSegments: 16,
   );
   late final CuboidGeometry _unitCube = CuboidGeometry(vm.Vector3.all(1.0));
+  late final List<MeshGeometry> _rubyTopFacetGeometries =
+      _createRubyTopFacetGeometries();
+  late final List<MeshGeometry> _rubyFrontFacetGeometries =
+      _createRubyFrontFacetGeometries();
+  late final List<MeshGeometry> _rubySideFacetGeometries =
+      _createRubySideFacetGeometries();
   late final PhysicallyBasedMaterial _neonCyanMaterial = _createNeonMaterial(
     vm.Vector4(0.0, 0.96, 1.0, 1.0),
   );
@@ -107,6 +113,13 @@ class BlockThemeSceneRenderer {
         colorIndex: colorIndex,
       ),
       BlockSurfaceDetail.brickStuds => _createBrickStudDetails(
+        block: block,
+        width: width,
+        depth: depth,
+        height: height,
+        colorIndex: colorIndex,
+      ),
+      BlockSurfaceDetail.rubyFacets => _createRubyFacetDetails(
         block: block,
         width: width,
         depth: depth,
@@ -538,6 +551,142 @@ class BlockThemeSceneRenderer {
     return details;
   }
 
+  List<Node> _createRubyFacetDetails({
+    required Node block,
+    required double width,
+    required double depth,
+    required double height,
+    required int colorIndex,
+  }) {
+    if (math.min(width, depth) < 0.34 || height < 0.1) return [];
+
+    final details = <Node>[];
+    final facetMaterials = [
+      _createRubyFacetMaterial(colorIndex, brightness: 1.5),
+      _createRubyFacetMaterial(colorIndex, brightness: 1.05),
+      _createRubyFacetMaterial(colorIndex, brightness: 0.56),
+      _createRubyFacetMaterial(colorIndex, brightness: 1.28),
+    ];
+    final facetHeight = math.min(width, depth) * 0.42;
+
+    // As superfícies são malhas triangulares reutilizadas, não riscos. As
+    // faces frontal, traseira, esquerda e direita recebem o mesmo tratamento
+    // para preservar a leitura de gema em qualquer ângulo da câmera.
+    _addRubyFacetSet(
+      block,
+      details,
+      geometries: _rubyTopFacetGeometries,
+      materials: facetMaterials,
+      position: vm.Vector3(0.0, height / 2 + 0.008, 0.0),
+      scale: vm.Vector3(width, facetHeight, depth),
+    );
+    _addRubyFacetSet(
+      block,
+      details,
+      geometries: _rubyFrontFacetGeometries,
+      materials: facetMaterials,
+      position: vm.Vector3(0.0, 0.0, -depth / 2 - 0.008),
+      scale: vm.Vector3(width, height, math.min(width, height) * 0.28),
+    );
+    _addRubyFacetSet(
+      block,
+      details,
+      geometries: _rubyFrontFacetGeometries,
+      materials: facetMaterials.reversed.toList(growable: false),
+      position: vm.Vector3(0.0, 0.0, depth / 2 + 0.008),
+      scale: vm.Vector3(width, height, math.min(width, height) * 0.28),
+      rotation: vm.Quaternion.euler(0.0, math.pi, 0.0),
+    );
+    _addRubyFacetSet(
+      block,
+      details,
+      geometries: _rubySideFacetGeometries,
+      materials: facetMaterials,
+      position: vm.Vector3(-width / 2 - 0.008, 0.0, 0.0),
+      scale: vm.Vector3(math.min(depth, height) * 0.28, height, depth),
+    );
+    _addRubyFacetSet(
+      block,
+      details,
+      geometries: _rubySideFacetGeometries,
+      materials: facetMaterials.reversed.toList(growable: false),
+      position: vm.Vector3(width / 2 + 0.008, 0.0, 0.0),
+      scale: vm.Vector3(math.min(depth, height) * 0.28, height, depth),
+      rotation: vm.Quaternion.euler(0.0, math.pi, 0.0),
+    );
+    _addRubyEdges(
+      block,
+      details,
+      material: _createRubyEdgeMaterial(colorIndex),
+      width: width,
+      depth: depth,
+      height: height,
+    );
+    return details;
+  }
+
+  void _addRubyFacetSet(
+    Node block,
+    List<Node> details, {
+    required List<MeshGeometry> geometries,
+    required List<Material> materials,
+    required vm.Vector3 position,
+    required vm.Vector3 scale,
+    vm.Quaternion? rotation,
+  }) {
+    for (var index = 0; index < geometries.length; index++) {
+      final facet = Node(mesh: Mesh(geometries[index], materials[index]))
+        ..position = position
+        ..scale = scale
+        ..castsShadows = false;
+      if (rotation != null) facet.rotation = rotation;
+      block.add(facet);
+      details.add(facet);
+    }
+  }
+
+  void _addRubyEdges(
+    Node block,
+    List<Node> details, {
+    required PhysicallyBasedMaterial material,
+    required double width,
+    required double depth,
+    required double height,
+  }) {
+    final thickness = math.min(0.028, math.min(width, depth) * 0.06);
+    final topY = height / 2 + thickness / 2 + 0.011;
+    for (final side in const [-1.0, 1.0]) {
+      _addCuboidDetail(
+        block,
+        details,
+        material: material,
+        position: vm.Vector3(0.0, topY, side * depth / 2),
+        scale: vm.Vector3(width, thickness, thickness),
+        castsShadows: false,
+      );
+      _addCuboidDetail(
+        block,
+        details,
+        material: material,
+        position: vm.Vector3(side * width / 2, topY, 0.0),
+        scale: vm.Vector3(thickness, thickness, depth),
+        castsShadows: false,
+      );
+    }
+    for (final x in const [-1.0, 1.0]) {
+      for (final z in const [-1.0, 1.0]) {
+        _addCuboidDetail(
+          block,
+          details,
+          material: material,
+          position: vm.Vector3(x * width / 2, 0.0, z * depth / 2),
+          scale: vm.Vector3(thickness, height, thickness),
+          castsShadows: false,
+        );
+      }
+    }
+  }
+
   int _brickStudCount(double length, {required int maximum}) {
     if (length < 0.36) return 0;
     return math.min(maximum, math.max(1, (length / 0.82).floor()));
@@ -616,12 +765,14 @@ class BlockThemeSceneRenderer {
     required PhysicallyBasedMaterial material,
     required vm.Vector3 position,
     required vm.Vector3 scale,
+    vm.Quaternion? rotation,
     bool castsShadows = true,
   }) {
     final detail = Node(mesh: Mesh(_unitCube, material))
       ..position = position
       ..scale = scale
       ..castsShadows = castsShadows;
+    if (rotation != null) detail.rotation = rotation;
     block.add(detail);
     details.add(detail);
   }
@@ -654,6 +805,90 @@ class BlockThemeSceneRenderer {
       faces.add(face);
     }
     return faces;
+  }
+
+  List<MeshGeometry> _createRubyTopFacetGeometries() {
+    return [
+      _createRubyFacetTriangle(
+        positions: [-0.5, 0.0, -0.5, 0.5, 0.0, -0.5, 0.0, 0.09, 0.0],
+        normal: vm.Vector3(0.0, 0.98, -0.18),
+      ),
+      _createRubyFacetTriangle(
+        positions: [0.5, 0.0, -0.5, 0.5, 0.0, 0.5, 0.0, 0.09, 0.0],
+        normal: vm.Vector3(0.18, 0.98, 0.0),
+      ),
+      _createRubyFacetTriangle(
+        positions: [0.5, 0.0, 0.5, -0.5, 0.0, 0.5, 0.0, 0.09, 0.0],
+        normal: vm.Vector3(0.0, 0.98, 0.18),
+      ),
+      _createRubyFacetTriangle(
+        positions: [-0.5, 0.0, 0.5, -0.5, 0.0, -0.5, 0.0, 0.09, 0.0],
+        normal: vm.Vector3(-0.18, 0.98, 0.0),
+      ),
+    ];
+  }
+
+  List<MeshGeometry> _createRubyFrontFacetGeometries() {
+    return [
+      _createRubyFacetTriangle(
+        positions: [-0.5, -0.5, 0.0, 0.5, -0.5, 0.0, 0.0, 0.08, -0.06],
+        normal: vm.Vector3(0.0, -0.1, -0.99),
+      ),
+      _createRubyFacetTriangle(
+        positions: [0.5, -0.5, 0.0, 0.5, 0.5, 0.0, 0.0, 0.08, -0.06],
+        normal: vm.Vector3(0.1, 0.0, -0.99),
+      ),
+      _createRubyFacetTriangle(
+        positions: [0.5, 0.5, 0.0, -0.5, 0.5, 0.0, 0.0, 0.08, -0.06],
+        normal: vm.Vector3(0.0, 0.1, -0.99),
+      ),
+      _createRubyFacetTriangle(
+        positions: [-0.5, 0.5, 0.0, -0.5, -0.5, 0.0, 0.0, 0.08, -0.06],
+        normal: vm.Vector3(-0.1, 0.0, -0.99),
+      ),
+    ];
+  }
+
+  List<MeshGeometry> _createRubySideFacetGeometries() {
+    return [
+      _createRubyFacetTriangle(
+        positions: [0.0, -0.5, -0.5, 0.0, -0.5, 0.5, -0.06, 0.08, 0.0],
+        normal: vm.Vector3(-0.99, -0.1, 0.0),
+      ),
+      _createRubyFacetTriangle(
+        positions: [0.0, -0.5, 0.5, 0.0, 0.5, 0.5, -0.06, 0.08, 0.0],
+        normal: vm.Vector3(-0.99, 0.0, 0.1),
+      ),
+      _createRubyFacetTriangle(
+        positions: [0.0, 0.5, 0.5, 0.0, 0.5, -0.5, -0.06, 0.08, 0.0],
+        normal: vm.Vector3(-0.99, 0.1, 0.0),
+      ),
+      _createRubyFacetTriangle(
+        positions: [0.0, 0.5, -0.5, 0.0, -0.5, -0.5, -0.06, 0.08, 0.0],
+        normal: vm.Vector3(-0.99, 0.0, -0.1),
+      ),
+    ];
+  }
+
+  MeshGeometry _createRubyFacetTriangle({
+    required List<double> positions,
+    required vm.Vector3 normal,
+  }) {
+    return MeshGeometry.fromArrays(
+      positions: Float32List.fromList(positions),
+      normals: Float32List.fromList([
+        normal.x,
+        normal.y,
+        normal.z,
+        normal.x,
+        normal.y,
+        normal.z,
+        normal.x,
+        normal.y,
+        normal.z,
+      ]),
+      indices: [0, 2, 1],
+    );
   }
 
   MeshGeometry _createClassicTopSheenGeometry({
@@ -874,6 +1109,35 @@ class BlockThemeSceneRenderer {
       )
       ..metallicFactor = 0.0
       ..roughnessFactor = 0.36;
+  }
+
+  UnlitMaterial _createRubyFacetMaterial(
+    int colorIndex, {
+    required double brightness,
+  }) {
+    final color = _colorForIndex(colorIndex);
+    return UnlitMaterial()
+      ..baseColorFactor = vm.Vector4(
+        (color.x * brightness).clamp(0.0, 1.0).toDouble(),
+        (color.y * brightness * 0.52 + 0.004).clamp(0.0, 1.0).toDouble(),
+        (color.z * brightness * 0.8 + 0.014).clamp(0.0, 1.0).toDouble(),
+        1.0,
+      );
+  }
+
+  PhysicallyBasedMaterial _createRubyEdgeMaterial(int colorIndex) {
+    final color = _colorForIndex(colorIndex);
+    return PhysicallyBasedMaterial()
+      ..baseColorFactor = vm.Vector4(
+        color.x + (1.0 - color.x) * 0.56,
+        color.y + (0.2 - color.y) * 0.22,
+        color.z + (0.34 - color.z) * 0.3,
+        1.0,
+      )
+      ..emissiveFactor = vm.Vector4(1.0, 0.04, 0.14, 1.0)
+      ..emissiveStrength = 0.68
+      ..metallicFactor = 0.42
+      ..roughnessFactor = 0.08;
   }
 
   PhysicallyBasedMaterial _createNeonMaterial(vm.Vector4 color) {

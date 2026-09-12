@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:blocky/design_system/arcade_colors.dart';
@@ -397,7 +398,9 @@ class _ThemeCardPreviewPainter extends CustomPainter {
     canvas.drawRRect(
       background,
       Paint()
-        ..color = accent.withValues(alpha: 0.12)
+        ..color = accent.withValues(
+          alpha: theme == BlockTheme.ruby ? 0.055 : 0.12,
+        )
         ..isAntiAlias = false,
     );
     canvas.drawOval(
@@ -611,6 +614,108 @@ class _ThemeCardPreviewPainter extends CustomPainter {
           }
         }
         canvas.restore();
+      case BlockTheme.ruby:
+        _drawRubyFacets(
+          canvas,
+          color: color,
+          top: top,
+          front: front,
+          side: side,
+          x: x,
+          y: y,
+          width: width,
+          depth: depth,
+          height: height,
+        );
+    }
+  }
+
+  void _drawRubyFacets(
+    Canvas canvas, {
+    required Color color,
+    required Path top,
+    required Path front,
+    required Path side,
+    required double x,
+    required double y,
+    required double width,
+    required double depth,
+    required double height,
+  }) {
+    final rubyHighlight = Color.lerp(color, const Color(0xFFF05A70), 0.4)!;
+    final brightFacet = Paint()..color = rubyHighlight.withValues(alpha: 0.32);
+    final middleFacet = Paint()
+      ..color = _lighten(color, 0.14).withValues(alpha: 0.3);
+    final darkFacet = Paint()
+      ..color = _darken(color, 0.46).withValues(alpha: 0.6);
+    final edgeWidth = math.max(0.7, width * 0.013);
+    final edge = Paint()
+      ..color = rubyHighlight.withValues(alpha: 0.76)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = edgeWidth;
+
+    canvas.save();
+    canvas.clipPath(top);
+    canvas.drawPath(
+      Path()
+        ..moveTo(x + width * 0.5, y + depth * 0.12)
+        ..lineTo(x + width * 0.97, y + depth * 1.0)
+        ..lineTo(x + width * 0.5, y + depth * 1.8)
+        ..close(),
+      brightFacet,
+    );
+    canvas.drawPath(
+      Path()
+        ..moveTo(x + width * 0.04, y + depth)
+        ..lineTo(x + width * 0.5, y + depth * 1.8)
+        ..lineTo(x + width * 0.5, y + depth * 0.12)
+        ..close(),
+      darkFacet,
+    );
+    canvas.drawPath(
+      Path()
+        ..moveTo(x + width * 0.22, y + depth * 0.5)
+        ..lineTo(x + width * 0.7, y + depth * 0.42)
+        ..lineTo(x + width * 0.54, y + depth * 1.4)
+        ..close(),
+      middleFacet,
+    );
+    canvas.restore();
+
+    canvas.save();
+    canvas.clipPath(front);
+    canvas.drawPath(
+      Path()
+        ..moveTo(x + width * 0.02, y + depth + height * 0.18)
+        ..lineTo(x + width * 0.48, y + depth * 1.88 + height * 0.12)
+        ..lineTo(x + width * 0.42, y + depth * 1.82 + height * 0.86)
+        ..close(),
+      darkFacet,
+    );
+    canvas.drawPath(
+      Path()
+        ..moveTo(x + width * 0.14, y + depth + height * 0.08)
+        ..lineTo(x + width * 0.46, y + depth * 1.72 + height * 0.12)
+        ..lineTo(x + width * 0.26, y + depth + height * 0.84)
+        ..close(),
+      brightFacet,
+    );
+    canvas.restore();
+
+    canvas.save();
+    canvas.clipPath(side);
+    canvas.drawPath(
+      Path()
+        ..moveTo(x + width * 0.56, y + depth * 1.88 + height * 0.12)
+        ..lineTo(x + width * 0.98, y + depth * 1.04 + height * 0.22)
+        ..lineTo(x + width * 0.6, y + depth * 1.82 + height * 0.86)
+        ..close(),
+      brightFacet,
+    );
+    canvas.restore();
+
+    for (final face in [top, front, side]) {
+      canvas.drawPath(face, edge);
     }
   }
 

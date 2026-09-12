@@ -71,6 +71,7 @@ class BlockyLocalizations {
     BlockTheme.cheese => _isPortuguese ? 'Queijo' : 'Cheese',
     BlockTheme.neon => 'Neon',
     BlockTheme.lego => 'Lego',
+    BlockTheme.ruby => _isPortuguese ? 'Rubi' : 'Ruby',
   };
 
   String rarityName(BlockThemeRarity rarity) => switch (rarity) {

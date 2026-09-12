@@ -13,6 +13,7 @@ enum BlockImpactMotion {
   firmSettle,
   neonPulse,
   brickLock,
+  crystalChime,
 }
 
 /// Detalhes geométricos leves adicionados sobre o paralelepípedo lógico.
@@ -27,6 +28,7 @@ enum BlockSurfaceDetail {
   chocolateSegments,
   neonStrips,
   brickStuds,
+  rubyFacets,
 }
 
 /// Define uma sequência de cores próxima entre blocos da mesma partida.
@@ -640,6 +642,86 @@ class BlockThemeVisual {
     transmission: 0.0,
   );
 
+  /// Gema vermelha polida, com facetas claras nas faces e um pulso cristalino
+  /// breve ao encaixar. O brilho é puramente visual e não muda a geometria.
+  static const ruby = BlockThemeVisual(
+    theme: BlockTheme.ruby,
+    surfaceDetail: BlockSurfaceDetail.rubyFacets,
+    placementImpact: BlockImpactVisual(
+      motion: BlockImpactMotion.crystalChime,
+      duration: Duration(milliseconds: 175),
+      horizontalScale: 0.022,
+      verticalScale: 0.05,
+      reboundHorizontalScale: 0.011,
+      reboundVerticalScale: 0.02,
+    ),
+    perfectParticles: BlockParticleVisual(
+      count: 10,
+      lifetime: 0.42,
+      effectDuration: Duration(milliseconds: 490),
+      emitterRadius: 0.42,
+      minimumSpeed: 0.54,
+      maximumSpeed: 1.1,
+      minimumSize: 0.02,
+      maximumSize: 0.048,
+      gravity: 2.8,
+    ),
+    perfectRecoveryParticles: BlockParticleVisual(
+      count: 17,
+      lifetime: 0.54,
+      effectDuration: Duration(milliseconds: 620),
+      emitterRadius: 0.6,
+      minimumSpeed: 0.74,
+      maximumSpeed: 1.48,
+      minimumSize: 0.032,
+      maximumSize: 0.074,
+      gravity: 3.0,
+    ),
+    cutParticles: BlockParticleVisual(
+      count: 11,
+      lifetime: 0.44,
+      effectDuration: Duration(milliseconds: 510),
+      emitterRadius: 0.09,
+      minimumSpeed: 0.34,
+      maximumSpeed: 0.86,
+      minimumSize: 0.018,
+      maximumSize: 0.044,
+      gravity: 3.9,
+    ),
+    fallingVisual: BlockFallingVisual(
+      wobbleAmplitude: 0.006,
+      wobbleFrequency: 10.0,
+    ),
+    perfectWobble: BlockPerfectWobbleVisual(
+      duration: Duration(milliseconds: 210),
+      translationAmplitude: 0.015,
+      rotationAmplitude: 0.026,
+    ),
+    recoveryGrowthOvershoot: 0.02,
+    sounds: BlockThemeSounds(
+      placement: GameSound.placement,
+      cut: GameSound.cut,
+      perfect: GameSound.perfect,
+      perfectRecovery: GameSound.perfectRecovery,
+      gameOver: GameSound.gameOver,
+    ),
+    colorProgression: BlockColorProgression(
+      hueStep: 3.0,
+      saturation: 0.82,
+      value: 0.66,
+      initialHueStart: 338.0,
+      initialHueRange: 18.0,
+      hueCycleRange: 18.0,
+      saturationVariation: 0.06,
+      valueVariation: 0.1,
+      variationFrequency: 0.78,
+    ),
+    metallicFactor: 0.5,
+    roughnessFactor: 0.16,
+    materialAlpha: 1.0,
+    transmission: 0.0,
+  );
+
   final BlockTheme theme;
   final BlockSurfaceDetail surfaceDetail;
   final BlockImpactVisual placementImpact;
@@ -663,6 +745,7 @@ class BlockThemeVisual {
     BlockTheme.cheese => cheese,
     BlockTheme.neon => neon,
     BlockTheme.lego => lego,
+    BlockTheme.ruby => ruby,
   };
 
   PhysicallyBasedMaterial createBlockMaterial({

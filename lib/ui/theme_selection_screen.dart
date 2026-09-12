@@ -19,6 +19,7 @@ class ThemeSelectionScreen extends StatefulWidget {
     required this.blockyCoins,
     required this.blockyCoinStorage,
     required this.unlockStorage,
+    this.unlockAllThemes = false,
   });
 
   final BlockTheme selectedTheme;
@@ -26,13 +27,16 @@ class ThemeSelectionScreen extends StatefulWidget {
   final int blockyCoins;
   final BlockyCoinStorage blockyCoinStorage;
   final BlockThemeUnlockStorage unlockStorage;
+  final bool unlockAllThemes;
 
   @override
   State<ThemeSelectionScreen> createState() => _ThemeSelectionScreenState();
 }
 
 class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
-  late final Set<BlockTheme> _unlockedThemes = {...widget.unlockedThemes};
+  late final Set<BlockTheme> _unlockedThemes = widget.unlockAllThemes
+      ? BlockTheme.values.toSet()
+      : {...widget.unlockedThemes};
   late int _blockyCoins = widget.blockyCoins;
   BlockTheme? _purchasingTheme;
 
@@ -356,9 +360,10 @@ class _ThemeCardPreviewPainter extends CustomPainter {
       );
     }
     final movingWidth = size.width * 0.46;
+    final movingColor = theme == BlockTheme.lego ? colors[4] : colors.last;
     _drawBlock(
       canvas,
-      color: colors.last,
+      color: movingColor,
       x: centerX + size.width * 0.015,
       y: size.height * 0.08,
       width: movingWidth,
@@ -490,23 +495,45 @@ class _ThemeCardPreviewPainter extends CustomPainter {
           );
           canvas.drawLine(point, point + Offset(0, height * 0.76), seam);
         }
-        final radius = width * 0.035;
+        final radius = width * 0.032;
         final studShadow = Paint()..color = _darken(color, 0.36);
         final stud = Paint()..color = _lighten(color, 0.14);
+        final glint = Paint()
+          ..color = ArcadeColors.white.withValues(alpha: 0.42);
+        canvas.save();
+        canvas.clipPath(top);
         for (var row = 0; row < 2; row++) {
           for (var column = 0; column < 4; column++) {
+            final u = 0.18 + column * 0.215;
+            final v = 0.27 + row * 0.42;
             final center = Offset(
-              x + width * (0.23 + column * 0.135 + row * 0.11),
-              y + depth * (0.72 + column * 0.125 + row * 0.36),
+              x + width * 0.5 * (u + v),
+              y + depth * (1 - u + v),
             );
-            canvas.drawCircle(
-              center + Offset(0, radius * 0.34),
-              radius,
+            canvas.drawOval(
+              Rect.fromCenter(
+                center: center + Offset(0, radius * 0.42),
+                width: radius * 2.1,
+                height: radius * 1.22,
+              ),
               studShadow,
             );
-            canvas.drawCircle(center, radius, stud);
+            canvas.drawOval(
+              Rect.fromCenter(
+                center: center,
+                width: radius * 2.0,
+                height: radius * 1.16,
+              ),
+              stud,
+            );
+            canvas.drawCircle(
+              center - Offset(radius * 0.32, radius * 0.18),
+              radius * 0.26,
+              glint,
+            );
           }
         }
+        canvas.restore();
     }
   }
 

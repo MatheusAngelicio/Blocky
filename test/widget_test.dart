@@ -273,6 +273,27 @@ void main() {
     expect(find.byIcon(Icons.lock), findsAtLeastNWidgets(1));
   });
 
+  testWidgets('makes every theme available in development mode', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [BlockyLocalizations.delegate],
+        supportedLocales: BlockyLocalizations.supportedLocales,
+        home: ThemeSelectionScreen(
+          selectedTheme: BlockTheme.classic,
+          unlockedThemes: {BlockTheme.classic},
+          blockyCoins: 0,
+          blockyCoinStorage: _InMemoryBlockyCoinStorage(),
+          unlockStorage: _InMemoryBlockThemeUnlockStorage(),
+          unlockAllThemes: true,
+        ),
+      ),
+    );
+
+    expect(find.byIcon(Icons.lock), findsNothing);
+  });
+
   testWidgets('unlocks a theme by spending Blocky Coins', (tester) async {
     final coinStorage = _InMemoryBlockyCoinStorage(15);
     final unlockStorage = _InMemoryBlockThemeUnlockStorage();

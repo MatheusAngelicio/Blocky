@@ -17,9 +17,14 @@ import 'package:flutter/material.dart';
 
 /// Tela inicial da partida e seleção visual do tema de bloco.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, this.onSettingsChanged});
+  const HomeScreen({
+    super.key,
+    this.onSettingsChanged,
+    this.unlockAllThemes = false,
+  });
 
   final ValueChanged<GameSettings>? onSettingsChanged;
+  final bool unlockAllThemes;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -53,11 +58,14 @@ class _HomeScreenState extends State<HomeScreen> {
       _gameSettingsStorage.load(),
     ]);
     final savedTheme = results[2] as BlockTheme;
-    final unlockedThemes = results[3] as Set<BlockTheme>;
+    final storedUnlockedThemes = results[3] as Set<BlockTheme>;
+    final unlockedThemes = widget.unlockAllThemes
+        ? BlockTheme.values.toSet()
+        : storedUnlockedThemes;
     final selectedTheme = unlockedThemes.contains(savedTheme)
         ? savedTheme
         : BlockTheme.classic;
-    if (selectedTheme != savedTheme) {
+    if (!widget.unlockAllThemes && selectedTheme != savedTheme) {
       await _blockThemeStorage.save(selectedTheme);
     }
     if (!mounted) return;
@@ -104,6 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
           blockyCoins: _blockyCoins,
           blockyCoinStorage: _blockyCoinStorage,
           unlockStorage: _blockThemeUnlockStorage,
+          unlockAllThemes: widget.unlockAllThemes,
         ),
       ),
     );
@@ -123,7 +132,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       _blockyCoins = results[0] as int;
-      _unlockedThemes = results[1] as Set<BlockTheme>;
+      _unlockedThemes = widget.unlockAllThemes
+          ? BlockTheme.values.toSet()
+          : results[1] as Set<BlockTheme>;
     });
   }
 
